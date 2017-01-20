@@ -36,16 +36,16 @@
         "category", category,
         "action", action,
         "itemId", itemId,
-        "itemLanguage", language,
+        "itemLanguage", language ?? "",
         "itemVersion", version,
         "itemPath", string.Empty,
-        "taskStack", taskStack,
-        "userName", userName,
+        "taskStack", taskStack ?? "",
+        "userName", userName ?? "",
         "additionalInfo", InstanceName,
         "created", DateTime.UtcNow
       };
 
-      this.DataApi.Execute(sql, parameters);
+      this.DataApi.Execute(Query, parameters);
     }
   }
 }
