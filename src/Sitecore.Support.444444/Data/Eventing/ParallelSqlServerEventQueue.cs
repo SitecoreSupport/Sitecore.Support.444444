@@ -105,7 +105,6 @@ namespace Sitecore.Support.Data.Eventing
         var deepSleep = ParallelEventQueueSettings.EventQueueThreadDeepSleep;
         var securityDisablerEnabled = EventQueueSettings.SecurityDisabler;                           
         var logInterval = ParallelEventQueueSettings.EventQueueThreadLogInterval;
-        var historyEnabled = EventQueueSettings.HistoryEnabled;
         var nextLogTime = DateTime.UtcNow;
 
         while (true)
@@ -159,7 +158,7 @@ namespace Sitecore.Support.Data.Eventing
                 process.Stop();                         
 
                 this.MarkEffectiveProcessed(queuedEvent);
-                if (historyEnabled)
+                if (HistoryEnabled)
                 {
                   this.WriteHistory(deserializeEvent, queuedEvent, 1);
                 }
@@ -186,8 +185,7 @@ namespace Sitecore.Support.Data.Eventing
           Log.Info(string.Format("Health.ProcessEQ.Time.Process: {0}", processMs), this);
           Log.Info(string.Format("Health.ProcessEQ.Time.PublishEndSleep: {0}", publishEndMs), this);
                                                      
-          var historyLogEnabled = historyEnabled;
-          if (historyLogEnabled)
+          if (HistoryEnabled)
           {
             this.History.AddHistoryEntry("Statistics", "ProcessEQ.Count", ID.Null, count.ToString(), userName: string.Empty);
             this.History.AddHistoryEntry("Statistics", "ProcessEQ.PublishEndCount", ID.Null, publishEndCount.ToString(), userName: string.Empty);
@@ -209,7 +207,7 @@ namespace Sitecore.Support.Data.Eventing
             Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Process: {0}", processAvg), this);
             Log.Info(string.Format("Health.ProcessEQ.Time.Avg.PublishEndSleep: {0}", publishEndAvg), this);
 
-            if (historyLogEnabled)
+            if (HistoryEnabled)
             {
               this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Total", ID.Null, totalAvg.ToString(), userName: string.Empty);
               this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize", ID.Null, deserializeAvg.ToString(), userName: string.Empty);

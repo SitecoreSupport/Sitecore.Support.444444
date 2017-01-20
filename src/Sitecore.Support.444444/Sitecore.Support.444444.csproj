@@ -69,12 +69,6 @@
     <Content Include="App_Config\Include\zzz\Sitecore.Support.444444.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="App_Config\Include\Sitecore.AdvancedSettings.config" />
-    <Content Include="App_Config\Include\Sitecore.AdvancedHistory.config" />
-    <Content Include="App_Config\Include\Sitecore.Abstract.DataProviders.config" />
-    <Content Include="App_Config\Include\Sitecore.Support.EventQueue.HistoryLogging.config" />
-    <Content Include="App_Config\Include\Sitecore.Support.ParallelEventQueue.CommonSettings.config" />
-    <Content Include="App_Config\Include\Sitecore.Support.ParallelEventQueue.SeparateQueues.config" />
     <None Include="packages.config" />
     <None Include="web.config" />
   </ItemGroup>

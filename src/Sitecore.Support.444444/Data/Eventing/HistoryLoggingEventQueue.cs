@@ -2,7 +2,8 @@
 {
   using System;
   using System.Collections.Generic;
-  using System.Diagnostics;      
+  using System.Diagnostics;
+  using System.Linq;
   using Sitecore.Data;
   using Sitecore.Data.DataProviders.Sql;
   using Sitecore.Data.Eventing;
@@ -23,7 +24,9 @@
     [NotNull]
     protected readonly string DatabaseName;
 
-    protected readonly bool UseBaseFunctionality;
+    protected readonly bool HistoryEnabled;
+
+    protected readonly bool HistoryDetailsEnabled;
 
     private readonly TimeSpan LogInterval;
 
@@ -49,19 +52,19 @@
       Assert.ArgumentNotNull(database, "database");
 
       var databaseName = database.Name;
-      var useBaseFunctionality = databaseName != EventQueueSettings.DatabaseName;
+      
+      HistoryEnabled = EventQueueSettings.HistoryEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
+      HistoryDetailsEnabled = EventQueueSettings.HistoryDetailsEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
 
-      this.UseBaseFunctionality = useBaseFunctionality;
       this.DatabaseName = databaseName;
       this.NextLogTime = DateTime.UtcNow;
       this.LogInterval = EventQueueSettings.LogInterval;
       this.History = new SqlServerHistoryProvider(databaseName);
 
-      if (useBaseFunctionality)
+      if (!HistoryEnabled)
       {
         return;
       }
-
 
       Log.Info("Support HistoryLoggingEventQueue is configured for {0} database".FormatWith(databaseName), this);
     }
@@ -88,7 +91,7 @@
         return;
       }
 
-      if (this.UseBaseFunctionality)
+      if (!HistoryEnabled)
       {
         base.ProcessEvents(handler);
 
@@ -177,7 +180,7 @@
 
         this.MarkProcessed(queuedEvent);
 
-        if (EventQueueSettings.HistoryEnabled && EventQueueSettings.HistoryDetailsEnabled)
+        if (HistoryEnabled && HistoryDetailsEnabled)
         {
           this.WriteHistory(deserializedEvent, queuedEvent, 0);
         }
@@ -208,8 +211,7 @@
       Log.Info(string.Format("Health.ReadEQ.Time.Total: {0}", totalMs), this);
       Log.Info(string.Format("Health.ReadEQ.Time.Read: {0}", readMs), this);
 
-      var historyLogEnabled = EventQueueSettings.HistoryEnabled;
-      if (historyLogEnabled)
+      if (HistoryEnabled)
       {
         this.History.AddHistoryEntry("Statistics", "EQ.Size", ID.Null, queueSize.ToString(), userName: string.Empty);
         this.History.AddHistoryEntry("Statistics", "ReadEQ.Count", ID.Null, count.ToString(), userName: string.Empty);
@@ -225,7 +227,7 @@
         Log.Info(string.Format("Health.ReadEQ.Time.Avg.Total: {0}", totalAvg), this);
         Log.Info(string.Format("Health.ReadEQ.Time.Avg.Read: {0}", readAvg), this);
 
-        if (historyLogEnabled)
+        if (HistoryEnabled)
         {
           this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Total", ID.Null, totalAvg.ToString(), userName: string.Empty);
           this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Read", ID.Null, readAvg.ToString(), userName: string.Empty);
@@ -256,8 +258,8 @@
         Log.Info(string.Format("Health.ProcessEQ.Time.Deserialize: {0}", deserializeMs), this);
         Log.Info(string.Format("Health.ProcessEQ.Time.Process: {0}", processMs), this);
 
-        var historyLogEnabled = EventQueueSettings.HistoryEnabled;
-        if (historyLogEnabled)
+        var historyLogEnabled = EventQueueSettings.HistoryEnabledDatabases;
+        if (HistoryEnabled)
         {
           this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize", ID.Null, deserializeMs.ToString(), userName: string.Empty);
           this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process", ID.Null, processMs.ToString(), userName: string.Empty);
@@ -271,7 +273,7 @@
           Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Deserialize: {0}", deserializeAvg), this);
           Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Process: {0}", processAvg), this);
 
-          if (historyLogEnabled)
+          if (HistoryEnabled)
           {
             this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize", ID.Null, deserializeAvg.ToString(), userName: string.Empty);
             this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process", ID.Null, processAvg.ToString(), userName: string.Empty);
