@@ -283,7 +283,7 @@
       mainProcess.Reset();
     }
 
-    protected void WriteHistory([NotNull] object eventObject, [NotNull] QueuedEvent queuedEvent, int threadNumber)
+    protected void WriteHistory([NotNull] object eventObject, [NotNull] QueuedEvent queuedEvent, int thread)
     {
       Assert.ArgumentNotNull(eventObject, "eventObject");
       Assert.ArgumentNotNull(queuedEvent, "queuedEvent");
@@ -292,7 +292,7 @@
       var eventBase = eventObject as ItemRemoteEventBase;
       if (eventBase != null)
       {
-        this.History.AddHistoryEntry("Event", eventName, ID.Parse(eventBase.ItemId), eventBase.LanguageName, eventBase.VersionNumber, taskStack: threadNumber.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
+        this.History.AddHistoryEntry("Event", eventName, ID.Parse(eventBase.ItemId), eventBase.LanguageName, eventBase.VersionNumber, taskStack: thread.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
 
         return;
       }
@@ -300,12 +300,12 @@
       var publishEnd = eventObject as PublishEndRemoteEvent;
       if (publishEnd != null)
       {
-        this.History.AddHistoryEntry("Event", eventName, ID.Parse(publishEnd.RootItemId), publishEnd.LanguageName, taskStack: threadNumber.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
+        this.History.AddHistoryEntry("Event", eventName, ID.Parse(publishEnd.RootItemId), publishEnd.LanguageName, taskStack: thread.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
 
         return;
       }
 
-      this.History.AddHistoryEntry("Event", eventName, ID.Null, taskStack: threadNumber.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
+      this.History.AddHistoryEntry("Event", eventName, ID.Null, userName: queuedEvent.Created.ToString(DateTimeFormat));
     }    
   }
 }

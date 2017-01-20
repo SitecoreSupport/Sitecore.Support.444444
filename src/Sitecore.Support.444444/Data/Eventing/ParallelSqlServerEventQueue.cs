@@ -14,7 +14,7 @@ namespace Sitecore.Support.Data.Eventing
   using Sitecore.StringExtensions;
   using Sitecore.Support.Data.ParallelEventQueue;
 
-  public abstract class ParallelSqlServerEventQueue : HistoryLoggingEventQueue
+  public class ParallelSqlServerEventQueue : HistoryLoggingEventQueue
   {
     [NotNull]
     protected readonly EventQueue.IPersistentTimestamp EffectivePersistentTimestamp;
@@ -23,9 +23,7 @@ namespace Sitecore.Support.Data.Eventing
 
     private DateTime EffectiveStampLastSaved = DateTime.UtcNow;
 
-    private int queueIndex;
-
-    protected ParallelSqlServerEventQueue([NotNull] SqlDataApi api, [NotNull] Database database)
+    public ParallelSqlServerEventQueue([NotNull] SqlDataApi api, [NotNull] Database database)
       : base(api, database)
     {
       Assert.ArgumentNotNull(api, "api");
@@ -37,7 +35,17 @@ namespace Sitecore.Support.Data.Eventing
       Log.Info("ParallelSqlServerEventQueue is {0} for {1}".FormatWith(useBaseFunctionality ? "disabled" : "enabled", database.Name), this);
 
       this.EffectivePersistentTimestamp = new PrefixedPropertyTimeStamp(database, "EQStampEffective_");
+             
+      if (this.UseBaseFunctionality)
+      {
+        return;
+      }
+
+      this.StartThread();
     }
+
+    [NotNull]
+    protected ConcurrentQueue<EventHandlerPair> Queue { get; } = new ConcurrentQueue<EventHandlerPair>();
 
     /// <summary>
     /// Puts the event into in-memory queue and marks it "processed".
@@ -55,15 +63,7 @@ namespace Sitecore.Support.Data.Eventing
       }
       else
       {
-        this.queueIndex++;
-        if (this.queueIndex >= ParallelEventQueueSettings.ParallelThreadsCount)
-        {
-          this.queueIndex = 0;
-        }
-
-        var queue = this.GetQueue(this.queueIndex);
-
-        queue.Enqueue(new EventHandlerPair(handler, queuedEvent));
+        Queue.Enqueue(new EventHandlerPair(handler, queuedEvent));
 
         // mark that event was taken to processing
         // reverted #1 to fix #5 EQSTamp_instance = queuedEvent.stamp
@@ -71,55 +71,30 @@ namespace Sitecore.Support.Data.Eventing
       }
     }
 
-    protected void StartThreads()
-    {
-      var count = ParallelEventQueueSettings.ParallelThreadsCount;
-      Assert.IsTrue(count >= 1, "With EventQueue.ParallelThreadsCount < 1 there is no sense in using ParallelSqlServerEventQueue");
-
-      var processedEvents = new QueuedEvent[count];
-
+    protected void StartThread()
+    {            
       // start threads
-      Log.Info("Starting {0} EventQueue threads".FormatWith(count), this);
-
-      for (var threadIndex = 0; threadIndex < count; threadIndex++)
-      {
-        var queue = this.GetQueue(threadIndex);
-
-        this.StartThread(threadIndex, queue, processedEvents);
-      }
-    }
-
-    protected void StartThread(int threadIndex, [NotNull] ConcurrentQueue<EventHandlerPair> queue, [NotNull] QueuedEvent[] processedEvents)
-    {
-      Assert.ArgumentNotNull(queue, "queue");
-      Assert.ArgumentNotNull(processedEvents, "processedEvents");
+      Log.Info("Starting EventQueue background thread", this);         
       
       var thread = new Thread(this.DoProcessQueue)
       {
-        Name = "EventQueueThread #" + threadIndex,
+        Name = "EventQueueThread",
         IsBackground = true
       };
 
-      thread.Start(new ThreadStartParams(queue, threadIndex, processedEvents));
-    }
-
-    [NotNull]
-    protected abstract ConcurrentQueue<EventHandlerPair> GetQueue(int threadIndex);
+      thread.Start(Queue);
+    }                                                                           
 
     private void DoProcessQueue([NotNull] object obj)
     {
-      Assert.ArgumentNotNull(obj, "obj");
+      Assert.ArgumentNotNull(obj, nameof(obj));
 
-      var par = (ThreadStartParams)obj;
-      var threadNumber = par.ThreadNumber;
-
+      var queue = (ConcurrentQueue<EventHandlerPair>)obj;
+      
       SecurityDisabler securityDisabler = null;
 
       try
       {
-        var queue = par.Queue;
-        var timeStamps = par.ProcessedEvents;
-
         var count = 0;
         var publishEndCount = 0;
         var deserialize = new Stopwatch();
@@ -127,7 +102,6 @@ namespace Sitecore.Support.Data.Eventing
         var publishEnd = new Stopwatch();
         var total = new Stopwatch();
 
-        var threadsCount = ParallelEventQueueSettings.ParallelThreadsCount;
         var deepSleep = ParallelEventQueueSettings.EventQueueThreadDeepSleep;
         var securityDisablerEnabled = EventQueueSettings.SecurityDisabler;
         var publishEndSleep = ParallelEventQueueSettings.EventQueueThreadPublishEndSleep;
@@ -169,32 +143,14 @@ namespace Sitecore.Support.Data.Eventing
               var eventType = queuedEvent.EventType;
               if (eventType == null || queuedEvent.InstanceType == null)
               {
-                Log.Warn("Ignoring unknown event: " + queuedEvent.EventTypeName + ", instance: " + queuedEvent.InstanceTypeName + ", sender: " + queuedEvent.InstanceName, typeof(ParallelEventQueueWithSeparateQueues));
+                Log.Warn("Ignoring unknown event: " + queuedEvent.EventTypeName + ", instance: " + queuedEvent.InstanceTypeName + ", sender: " + queuedEvent.InstanceName, typeof(ParallelSqlServerEventQueue));
               }
               else
               {
-                timeStamps[threadNumber] = queuedEvent;
                 if (eventType == typeof(PublishEndRemoteEvent))
                 {
-                  publishEndCount++;
-
-                  if (publishEndSync && threadsCount > 1)
-                  {
-                    // wait for other threads process all events that were before publish:end:remote
-                    while (true)
-                    {
-                      if (!this.WaitRequired(threadNumber, timeStamps))
-                      {
-                        break;
-                      }
-
-                      publishEnd.Start();
-                      Thread.Sleep(publishEndSleep);
-                      publishEnd.Stop();
-                    }
-                  }
-                }
-
+                  publishEndCount++;       
+                }    
 
                 deserialize.Start();
                 var deserializeEvent = this.DeserializeEvent(queuedEvent);
@@ -202,14 +158,12 @@ namespace Sitecore.Support.Data.Eventing
 
                 process.Start();
                 pair.Handler(deserializeEvent, queuedEvent.InstanceType);
-                process.Stop();
-
-                timeStamps[threadNumber] = queuedEvent;
+                process.Stop();                         
 
                 this.MarkEffectiveProcessed(queuedEvent);
                 if (historyEnabled)
                 {
-                  this.WriteHistory(deserializeEvent, queuedEvent, threadNumber);
+                  this.WriteHistory(deserializeEvent, queuedEvent, 1);
                 }
               }
             }
@@ -227,23 +181,22 @@ namespace Sitecore.Support.Data.Eventing
           var processMs = process.ElapsedMilliseconds;
           var publishEndMs = publishEnd.ElapsedMilliseconds;
 
-          Log.Info(string.Format("Health.ProcessEQ{0}.Count: {1}", threadNumber, count), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.PublishEndCount: {1}", threadNumber, publishEndCount), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Total: {1}", threadNumber, totalMs), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Deserialize: {1}", threadNumber, deserializeMs), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Process: {1}", threadNumber, processMs), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.PublishEndSleep: {1}", threadNumber, publishEndMs), this);
-
-          var taskStack = threadNumber.ToString();
+          Log.Info(string.Format("Health.ProcessEQ{0}.Count: {1}", count), this);
+          Log.Info(string.Format("Health.ProcessEQ{0}.PublishEndCount: {1}", publishEndCount), this);
+          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Total: {1}", totalMs), this);
+          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Deserialize: {1}", deserializeMs), this);
+          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Process: {1}", processMs), this);
+          Log.Info(string.Format("Health.ProcessEQ{0}.Time.PublishEndSleep: {1}", publishEndMs), this);
+                                                     
           var historyLogEnabled = historyEnabled;
           if (historyLogEnabled)
           {
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Count", ID.Null, count.ToString(), taskStack: taskStack, userName: string.Empty);
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.PublishEndCount", ID.Null, publishEndCount.ToString(), taskStack: taskStack, userName: string.Empty);
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Total", ID.Null, totalMs.ToString(), taskStack: taskStack, userName: string.Empty);
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize", ID.Null, deserializeMs.ToString(), taskStack: taskStack, userName: string.Empty);
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process", ID.Null, processMs.ToString(), taskStack: taskStack, userName: string.Empty);
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.PublishEndSleep", ID.Null, publishEndMs.ToString(), taskStack: taskStack, userName: string.Empty);
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Count", ID.Null, count.ToString(), userName: string.Empty);
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.PublishEndCount", ID.Null, publishEndCount.ToString(), userName: string.Empty);
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Total", ID.Null, totalMs.ToString(), userName: string.Empty);
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize", ID.Null, deserializeMs.ToString(), userName: string.Empty);
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process", ID.Null, processMs.ToString(), userName: string.Empty);
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.PublishEndSleep", ID.Null, publishEndMs.ToString(), userName: string.Empty);
           }
 
           if (count > 0)
@@ -253,17 +206,17 @@ namespace Sitecore.Support.Data.Eventing
             var processAvg = processMs / count;
             var publishEndAvg = publishEndMs / count;
 
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Total: {1}", threadNumber, totalAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Deserialize: {1}", threadNumber, deserializeAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Process: {1}", threadNumber, processAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.PublishEndSleep: {1}", threadNumber, publishEndAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Total: {1}", totalAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Deserialize: {1}", deserializeAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Process: {1}", processAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.PublishEndSleep: {1}", publishEndAvg), this);
 
             if (historyLogEnabled)
             {
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Total", ID.Null, totalAvg.ToString(), taskStack: taskStack, userName: string.Empty);
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize", ID.Null, deserializeAvg.ToString(), taskStack: taskStack, userName: string.Empty);
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process", ID.Null, processAvg.ToString(), taskStack: taskStack, userName: string.Empty);
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.PublishEndSleep", ID.Null, publishEndAvg.ToString(), taskStack: taskStack, userName: string.Empty);
+              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Total", ID.Null, totalAvg.ToString(), userName: string.Empty);
+              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize", ID.Null, deserializeAvg.ToString(), userName: string.Empty);
+              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process", ID.Null, processAvg.ToString(), userName: string.Empty);
+              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.PublishEndSleep", ID.Null, publishEndAvg.ToString(), userName: string.Empty);
             }
           }
 
@@ -279,7 +232,7 @@ namespace Sitecore.Support.Data.Eventing
       }
       catch (Exception ex)
       {
-        Log.Fatal(string.Format("ParallelEventQueue thread #{0} crashed.", threadNumber), ex, this);
+        Log.Fatal(string.Format("ParallelEventQueue background thread crashed."), ex, this);
       }
       finally
       {
@@ -288,66 +241,6 @@ namespace Sitecore.Support.Data.Eventing
           securityDisabler.Dispose();
         }
       }
-    }
-
-    private bool WaitRequired(int threadNumber, [NotNull] QueuedEvent[] processedEvents)
-    {
-      Assert.ArgumentNotNull(processedEvents, "processedEvents");
-
-      var currentEvent = processedEvents[threadNumber];
-      Assert.IsNotNull(currentEvent, "currentEvent");
-
-      var currentStamp = currentEvent.Timestamp;
-      var lastIndex = processedEvents.Length - 1;
-
-      // check all non-pub:end before current one in the array 
-      // [ check, check, check <start , this, ... ]
-      for (var index = threadNumber - 1; index >= 0; --index)
-      {
-        var otherEvent = processedEvents[index];
-        if (otherEvent == null)
-        {
-          continue;
-        }
-
-        if (otherEvent.InstanceType == typeof(PublishEndRemoteEvent))
-        {
-          // okay here, need to check second part of the array
-          break;
-        }
-
-        var otherEventStamp = otherEvent.Timestamp;
-        if (otherEventStamp < currentStamp)
-        {
-          return true;
-        }
-      }
-
-      // check all non-pub:end after current one in the array 
-      // [ ... , this, check, check, check <start ]
-      for (var index = lastIndex; index > threadNumber; --index)
-      {
-        var otherEvent = processedEvents[index];
-        if (otherEvent == null)
-        {
-          continue;
-        }
-
-        if (otherEvent.InstanceType == typeof(PublishEndRemoteEvent))
-        {
-          // okay here as well
-          return false;
-        }
-
-        var otherEventStamp = otherEvent.Timestamp;
-        if (otherEventStamp < currentStamp)
-        {
-          return true;
-        }
-      }
-
-      // if min stamp of others is larger then we do not need to wait
-      return false;
     }
 
     private void MarkEffectiveProcessed([NotNull] QueuedEvent queuedEvent)
@@ -359,7 +252,7 @@ namespace Sitecore.Support.Data.Eventing
 
     private void SetTimestampForLastEffectiveProcessing([NotNull] EventQueue.TimeStamp currentTimestamp)
     {
-      Assert.ArgumentNotNull(currentTimestamp, "currentTimestamp");
+      Assert.ArgumentNotNull(currentTimestamp, nameof(currentTimestamp));
 
       if (!(DateTime.UtcNow - this.EffectiveStampLastSaved > Settings.EventQueue.PersistStampInterval))
       {

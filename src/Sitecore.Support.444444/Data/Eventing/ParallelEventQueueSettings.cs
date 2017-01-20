@@ -9,9 +9,6 @@
     public static readonly string DatabaseName = Settings.GetSetting("ParallelEventQueue.DatabaseName", "web");
 
     [NotNull]
-    public static readonly int ParallelThreadsCount = Settings.GetIntSetting("ParallelEventQueue.ParallelThreadsCount", 4);
-
-    [NotNull]
     public static readonly int EventQueueThreadDeepSleep = Settings.GetIntSetting("ParallelEventQueue.EventQueueThread.DeepSleep", 1000);
 
     [NotNull]
