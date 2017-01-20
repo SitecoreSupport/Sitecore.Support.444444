@@ -11,7 +11,7 @@ namespace Sitecore.Support.Data.Eventing
 
     public static readonly bool HistoryDetailsEnabled = Settings.GetBoolSetting("EventQueue.HistoryDetailsEnabled", true);
 
-    public static readonly bool SecurityDisabler = Settings.GetBoolSetting("EventQueue.SecurityDisabler", false);
+    public static readonly bool SecurityDisabler = Settings.GetBoolSetting("EventQueue.SecurityDisabler", true);
 
     public static readonly TimeSpan LogInterval = Settings.GetTimeSpanSetting("EventQueue.MainThread.LogInterval", new TimeSpan(0, 0, 5, 0));
   }
