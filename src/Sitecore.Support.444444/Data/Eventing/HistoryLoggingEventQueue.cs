@@ -52,7 +52,7 @@
       Assert.ArgumentNotNull(database, "database");
 
       var databaseName = database.Name;
-      
+
       HistoryEnabled = EventQueueSettings.HistoryEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
       HistoryDetailsEnabled = EventQueueSettings.HistoryDetailsEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
 
@@ -85,7 +85,7 @@
     public override void ProcessEvents([NotNull] Action<object, Type> handler)
     {
       Assert.ArgumentNotNull(handler, "handler");
-      
+
       if (!this.ListenToRemoteEvents)
       {
         return;
@@ -213,10 +213,21 @@
 
       if (HistoryEnabled)
       {
-        this.History.AddHistoryEntry("Statistics", "EQ.Size", ID.Null, queueSize.ToString(), userName: string.Empty);
-        this.History.AddHistoryEntry("Statistics", "ReadEQ.Count", ID.Null, count.ToString(), userName: string.Empty);
-        this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Total", ID.Null, totalMs.ToString(), userName: string.Empty);
-        this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Read", ID.Null, readMs.ToString(), userName: string.Empty);
+        this.History.AddHistoryEntry("Statistics", "EQ.Size",
+          taskStack: queueSize.ToString(),
+          userName: string.Empty);
+
+        this.History.AddHistoryEntry("Statistics", "ReadEQ.Count",
+          taskStack: count.ToString(),
+          userName: string.Empty);
+
+        this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Total",
+          taskStack: totalMs.ToString(),
+          userName: string.Empty);
+
+        this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Read",
+          taskStack: readMs.ToString(),
+          userName: string.Empty);
       }
 
       if (count > 0)
@@ -229,8 +240,13 @@
 
         if (HistoryEnabled)
         {
-          this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Total", ID.Null, totalAvg.ToString(), userName: string.Empty);
-          this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Read", ID.Null, readAvg.ToString(), userName: string.Empty);
+          this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Total",
+          taskStack: totalAvg.ToString(),
+          userName: string.Empty);
+
+          this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Read",
+          taskStack: readAvg.ToString(),
+          userName: string.Empty);
         }
       }
 
@@ -261,8 +277,13 @@
         var historyLogEnabled = EventQueueSettings.HistoryEnabledDatabases;
         if (HistoryEnabled)
         {
-          this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize", ID.Null, deserializeMs.ToString(), userName: string.Empty);
-          this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process", ID.Null, processMs.ToString(), userName: string.Empty);
+          this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize",
+          taskStack: deserializeMs.ToString(),
+          userName: string.Empty);
+
+          this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process",
+          taskStack: processMs.ToString(),
+          userName: string.Empty);
         }
 
         if (count > 0)
@@ -275,8 +296,13 @@
 
           if (HistoryEnabled)
           {
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize", ID.Null, deserializeAvg.ToString(), userName: string.Empty);
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process", ID.Null, processAvg.ToString(), userName: string.Empty);
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize",
+          taskStack: deserializeAvg.ToString(),
+          userName: string.Empty);
+
+            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process",
+          taskStack: processAvg.ToString(),
+          userName: string.Empty);
           }
         }
       }
@@ -294,7 +320,12 @@
       var eventBase = eventObject as ItemRemoteEventBase;
       if (eventBase != null)
       {
-        this.History.AddHistoryEntry("Event", eventName, ID.Parse(eventBase.ItemId), eventBase.LanguageName, eventBase.VersionNumber, taskStack: thread.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
+        this.History.AddHistoryEntry("Event", eventName, 
+          itemId: ID.Parse(eventBase.ItemId), 
+          language: eventBase.LanguageName, 
+          version: eventBase.VersionNumber,
+          taskStack: thread.ToString(),
+          userName: queuedEvent.Created.ToString(DateTimeFormat));
 
         return;
       }
@@ -302,12 +333,17 @@
       var publishEnd = eventObject as PublishEndRemoteEvent;
       if (publishEnd != null)
       {
-        this.History.AddHistoryEntry("Event", eventName, ID.Parse(publishEnd.RootItemId), publishEnd.LanguageName, taskStack: thread.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
+        this.History.AddHistoryEntry("Event", eventName, 
+          itemId: ID.Parse(publishEnd.RootItemId), 
+          language: publishEnd.LanguageName,
+          taskStack: thread.ToString(),
+          userName: queuedEvent.Created.ToString(DateTimeFormat));
 
         return;
       }
 
-      this.History.AddHistoryEntry("Event", eventName, ID.Null, userName: queuedEvent.Created.ToString(DateTimeFormat));
-    }    
+      this.History.AddHistoryEntry("Event", eventName,
+          taskStack: queuedEvent.Created.ToString(DateTimeFormat));
+    }
   }
 }

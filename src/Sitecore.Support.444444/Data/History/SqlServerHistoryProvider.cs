@@ -22,7 +22,7 @@
       DataApi = new SqlServerDataApi(Settings.GetConnectionString(databaseName));
     }
 
-    public void AddHistoryEntry(string category, string action, ID itemId, string language = null, int version = 0, string taskStack = null, string userName = null)
+    public void AddHistoryEntry(string category, string action, ID itemId = null, string language = null, int version = 0, string taskStack = null, string userName = null)
     {      
       Assert.ArgumentNotNull(category, nameof(category));
       Assert.ArgumentNotNull(action, nameof(action));
