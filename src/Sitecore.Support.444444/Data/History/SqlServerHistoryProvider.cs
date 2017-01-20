@@ -73,7 +73,7 @@ VALUES
         "created", DateTime.UtcNow
       };
 
-      this.DataApi.Execute(Query, parameters);
+      DataApi.Execute(Query, parameters);
     }
   }
 }

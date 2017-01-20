@@ -41,35 +41,35 @@
 
     public SqlServerDataProvider([NotNull] string connectionString) : base(connectionString)
     {
-      Assert.ArgumentNotNull(connectionString, "connectionString");
+      Assert.ArgumentNotNull(connectionString, nameof(connectionString));
 
       // Create Providers
-      this.EventQueueType = null;
-      this.PublishQueueProvider = null;
-      this.DatabasePropertiesProvider = null;
+      EventQueueType = null;
+      PublishQueueProvider = null;
+      DatabasePropertiesProvider = null;
 
       // Create Delegates
-      this.UpdateItemDefinitionDelegate = this.CreateUpdateItemDefinitionDelegate();
-      this.UpdateItemFieldsDelegate = this.CreateUpdateItemFieldsDelegate();
-      this.OnItemSavedDelegate = this.CreateOnItemSavedDelegate();
+      UpdateItemDefinitionDelegate = CreateUpdateItemDefinitionDelegate();
+      UpdateItemFieldsDelegate = CreateUpdateItemFieldsDelegate();
+      OnItemSavedDelegate = CreateOnItemSavedDelegate();
     }
 
     public SqlServerDataProvider([NotNull] string connectionString, [NotNull] string eventQueueType, [NotNull] string publishQueueProviderType, [NotNull] string databasePropertiesProviderType) : base(connectionString)
     {
-      Assert.ArgumentNotNull(connectionString, "connectionString");
-      Assert.ArgumentNotNull(eventQueueType, "eventQueueType");
-      Assert.ArgumentNotNull(publishQueueProviderType, "publishQueueProviderType");
-      Assert.ArgumentNotNull(databasePropertiesProviderType, "databasePropertiesProviderType");
+      Assert.ArgumentNotNull(connectionString, nameof(connectionString));
+      Assert.ArgumentNotNull(eventQueueType, nameof(eventQueueType));
+      Assert.ArgumentNotNull(publishQueueProviderType, nameof(publishQueueProviderType));
+      Assert.ArgumentNotNull(databasePropertiesProviderType, nameof(databasePropertiesProviderType));
 
       // Create Providers
-      this.EventQueueType = this.ParseEventQueue(eventQueueType);
-      this.PublishQueueProvider = this.CreatePublishQueueProvider(publishQueueProviderType);
-      this.DatabasePropertiesProvider = this.CreateDatabasePropertiesProvider(databasePropertiesProviderType);
+      EventQueueType = ParseEventQueue(eventQueueType);
+      PublishQueueProvider = CreatePublishQueueProvider(publishQueueProviderType);
+      DatabasePropertiesProvider = CreateDatabasePropertiesProvider(databasePropertiesProviderType);
 
       // Create Delegates
-      this.UpdateItemDefinitionDelegate = this.CreateUpdateItemDefinitionDelegate();
-      this.UpdateItemFieldsDelegate = this.CreateUpdateItemFieldsDelegate();
-      this.OnItemSavedDelegate = this.CreateOnItemSavedDelegate();
+      UpdateItemDefinitionDelegate = CreateUpdateItemDefinitionDelegate();
+      UpdateItemFieldsDelegate = CreateUpdateItemFieldsDelegate();
+      OnItemSavedDelegate = CreateOnItemSavedDelegate();
     }
 
     #endregion
@@ -210,29 +210,29 @@
     [UsedImplicitly]
     public void UpdateItemDefinition([NotNull] ItemDefinition item, [NotNull] ItemChanges changes)
     {
-      Assert.ArgumentNotNull(item, "item");
-      Assert.ArgumentNotNull(changes, "changes");
+      Assert.ArgumentNotNull(item, nameof(item));
+      Assert.ArgumentNotNull(changes, nameof(changes));
 
-      this.UpdateItemDefinitionDelegate(item, changes);
+      UpdateItemDefinitionDelegate(item, changes);
     }
 
     [UsedImplicitly]
     public void UpdateItemFields([NotNull] ID itemId, [NotNull] ItemChanges changes)
     {
-      Assert.ArgumentNotNull(itemId, "itemId");
-      Assert.ArgumentNotNull(changes, "changes");
+      Assert.ArgumentNotNull(itemId, nameof(itemId));
+      Assert.ArgumentNotNull(changes, nameof(changes));
 
-      this.UpdateItemFieldsDelegate(itemId, changes);
+      UpdateItemFieldsDelegate(itemId, changes);
     }
 
     [UsedImplicitly]
     public void OnItemSaved([NotNull] ID itemId, [NotNull] ID templateId)
     {
-      Assert.ArgumentNotNull(itemId, "itemId");
-      Assert.ArgumentNotNull(templateId, "templateId");
+      Assert.ArgumentNotNull(itemId, nameof(itemId));
+      Assert.ArgumentNotNull(templateId, nameof(templateId));
 
 
-      this.OnItemSavedDelegate(itemId, templateId);
+      OnItemSavedDelegate(itemId, templateId);
     }
 
     #endregion
@@ -242,10 +242,10 @@
     [CanBeNull]
     public override EventQueue GetEventQueue()
     {
-      var eventQueueType = this.EventQueueType;
+      var eventQueueType = EventQueueType;
       if (eventQueueType != null)
       {
-        var eventQueue = this.CreateEventQueue(eventQueueType);
+        var eventQueue = CreateEventQueue(eventQueueType);
         if (eventQueue != null)
         {
           return eventQueue;
@@ -262,28 +262,28 @@
     [CanBeNull]
     public override IDList GetPublishQueue(DateTime from, DateTime to, [NotNull] CallContext context)
     {
-      var provider = this.PublishQueueProvider;
+      var provider = PublishQueueProvider;
       if (provider == null)
       {
         return base.GetPublishQueue(from, to, context);
       }
 
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.GetPublishQueue(from, to, context, this) as IDList ?? base.GetPublishQueue(from, to, context);
     }
 
     public override bool AddToPublishQueue([NotNull] ID itemID, [NotNull] string action, DateTime date, [NotNull] CallContext context)
     {
-      var provider = this.PublishQueueProvider;
+      var provider = PublishQueueProvider;
       if (provider == null)
       {
         return base.AddToPublishQueue(itemID, action, date, context);
       }
 
-      Assert.ArgumentNotNull(itemID, "itemID");
-      Assert.ArgumentNotNull(action, "action");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(itemID, nameof(itemID));
+      Assert.ArgumentNotNull(action, nameof(action));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.AddToPublishQueue(itemID, action, date, context) || base.AddToPublishQueue(itemID, action, date, context);
     }
@@ -295,43 +295,43 @@
     [CanBeNull]
     public override string GetProperty([NotNull] string propertyName, [NotNull] CallContext context)
     {
-      var provider = this.DatabasePropertiesProvider;
+      var provider = DatabasePropertiesProvider;
       if (provider == null)
       {
         return base.GetProperty(propertyName, context);
       }
 
-      Assert.ArgumentNotNull(propertyName, "propertyName");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(propertyName, nameof(propertyName));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.GetProperty(propertyName, context);
     }
 
     public override bool SetProperty([NotNull] string parameterName, [NotNull] string value, [NotNull] CallContext context)
     {
-      var provider = this.DatabasePropertiesProvider;
+      var provider = DatabasePropertiesProvider;
       if (provider == null)
       {
         return base.SetProperty(parameterName, value, context);
       }
 
-      Assert.ArgumentNotNull(parameterName, "parameterName");
-      Assert.ArgumentNotNull(value, "value");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(parameterName, nameof(parameterName));
+      Assert.ArgumentNotNull(value, nameof(value));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.SetProperty(parameterName, value, context);
     }
 
     public override bool RemoveProperty([NotNull] string propertyName, bool isPrefix, [NotNull] CallContext context)
     {
-      var provider = this.DatabasePropertiesProvider;
+      var provider = DatabasePropertiesProvider;
       if (provider == null)
       {
         return base.RemoveProperty(propertyName, isPrefix, context);
       }
 
-      Assert.ArgumentNotNull(propertyName, "propertyName");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(propertyName, nameof(propertyName));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.RemoveProperty(propertyName, isPrefix, context);
     }
@@ -339,14 +339,14 @@
     [CanBeNull]
     public override List<string> GetPropertyKeys([NotNull] string prefix, [NotNull] CallContext context)
     {
-      var provider = this.DatabasePropertiesProvider;
+      var provider = DatabasePropertiesProvider;
       if (provider == null)
       {
         return base.GetPropertyKeys(prefix, context);
       }
 
-      Assert.ArgumentNotNull(prefix, "prefix");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(prefix, nameof(prefix));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.GetPropertyKeys(prefix, context);
     }
@@ -392,43 +392,43 @@
     [CanBeNull]
     protected override string GetPropertyCore([NotNull] string propertyName, [NotNull] CallContext context)
     {
-      var provider = this.DatabasePropertiesProvider;
+      var provider = DatabasePropertiesProvider;
       if (provider == null)
       {
         return base.GetPropertyCore(propertyName, context);
       }
 
-      Assert.ArgumentNotNull(propertyName, "propertyName");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(propertyName, nameof(propertyName));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.GetPropertyCore(propertyName, context);
     }
 
     protected override bool SetPropertyCore([NotNull] string parameterName, [NotNull] string value, [NotNull] CallContext context)
     {
-      var provider = this.DatabasePropertiesProvider;
+      var provider = DatabasePropertiesProvider;
       if (provider == null)
       {
         return base.SetPropertyCore(parameterName, value, context);
       }
 
-      Assert.ArgumentNotNull(parameterName, "parameterName");
-      Assert.ArgumentNotNull(value, "value");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(parameterName, nameof(parameterName));
+      Assert.ArgumentNotNull(value, nameof(value));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.SetPropertyCore(parameterName, value, context);
     }
 
     protected override bool RemovePropertyCore([NotNull] string propertyName, bool isPrefix, [NotNull] CallContext context)
     {
-      var provider = this.DatabasePropertiesProvider;
+      var provider = DatabasePropertiesProvider;
       if (provider == null)
       {
         return base.RemovePropertyCore(propertyName, isPrefix, context);
       }
 
-      Assert.ArgumentNotNull(propertyName, "propertyName");
-      Assert.ArgumentNotNull(context, "context");
+      Assert.ArgumentNotNull(propertyName, nameof(propertyName));
+      Assert.ArgumentNotNull(context, nameof(context));
 
       return provider.RemovePropertyCore(propertyName, isPrefix, context);
     }
@@ -448,7 +448,7 @@
       var type = Type.GetType(assemblyQualifiedName);
       if (type == null)
       {
-        Log.Error(string.Format("Cannot find the \"{0}\" type that is supposed to be an EventQueue.", assemblyQualifiedName), this);
+        Log.Error($"Cannot find the \"{assemblyQualifiedName}\" type that is supposed to be an EventQueue.", this);
       }
 
       return type;
@@ -457,11 +457,11 @@
     [CanBeNull]
     private EventQueue CreateEventQueue([NotNull] Type type)
     {
-      Assert.ArgumentNotNull(type, "type");
+      Assert.ArgumentNotNull(type, nameof(type));
 
       try
       {
-        var parameters = new object[] { this.Api, this.Database };
+        var parameters = new object[] { Api, Database };
         var eventQueue = ReflectionUtil.CreateObject(type, parameters);
         Assert.IsNotNull(eventQueue, "eventQueue");
 
@@ -469,7 +469,7 @@
       }
       catch (Exception ex)
       {
-        Log.Error(string.Format("Cannot instantiate the \"{0}\" type which represents an EventQueue. The default one will be used instead: {1}", type.AssemblyQualifiedName, typeof(SqlServerEventQueue).AssemblyQualifiedName), ex, this);
+        Log.Error($"Cannot instantiate the \"{type.AssemblyQualifiedName}\" type which represents an EventQueue. The default one will be used instead: {typeof(SqlServerEventQueue).AssemblyQualifiedName}", ex, this);
         return null;
       }
     }
@@ -485,7 +485,7 @@
       var type = Type.GetType(assemblyQualifiedName);
       if (type == null)
       {
-        Log.Error(string.Format("Cannot find the \"{0}\" type that is supposed to be an IPublishQueueProvider. The default one will be used instead: {1}", assemblyQualifiedName, typeof(Sitecore.Data.SqlServer.SqlServerDataProvider).AssemblyQualifiedName), this);
+        Log.Error($"Cannot find the \"{assemblyQualifiedName}\" type that is supposed to be an IPublishQueueProvider. The default one will be used instead: {typeof(Sitecore.Data.SqlServer.SqlServerDataProvider).AssemblyQualifiedName}", this);
         return null;
       }
 
@@ -506,7 +506,7 @@
       var type = Type.GetType(assemblyQualifiedName);
       if (type == null)
       {
-        Log.Error(string.Format("Cannot find the \"{0}\" type that is supposed to be an IDatabasePropertiesProvider. The default one will be used instead: {1}", assemblyQualifiedName, typeof(Sitecore.Data.SqlServer.SqlServerDataProvider).AssemblyQualifiedName), this);
+        Log.Error($"Cannot find the \"{assemblyQualifiedName}\" type that is supposed to be an IDatabasePropertiesProvider. The default one will be used instead: {typeof(Sitecore.Data.SqlServer.SqlServerDataProvider).AssemblyQualifiedName}", this);
         return null;
       }
 

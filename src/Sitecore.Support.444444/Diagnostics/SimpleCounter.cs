@@ -6,12 +6,12 @@
 
     public void Reset()
     {
-      this.Value = 0;
+      Value = 0;
     }
 
     public void Increment()
     {
-      this.Value++;
+      Value++;
     }
   }
 }

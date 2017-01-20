@@ -9,9 +9,9 @@ namespace Sitecore.Support.Reflection
     [NotNull]
     public static Action<T1, T2> CreateMethodDelegate<T1, T2>([NotNull] Type type, [NotNull] object obj, [NotNull] string name, bool includeNonPublic, bool includeInherited, bool includeStatic)
     {
-      Assert.ArgumentNotNull(type, "type");
-      Assert.ArgumentNotNull(obj, "obj");
-      Assert.ArgumentNotNull(name, "name");
+      Assert.ArgumentNotNull(type, nameof(type));
+      Assert.ArgumentNotNull(obj, nameof(obj));
+      Assert.ArgumentNotNull(name, nameof(name));
 
       var parameters = new[]
       {

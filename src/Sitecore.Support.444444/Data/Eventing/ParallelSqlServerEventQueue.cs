@@ -26,22 +26,22 @@ namespace Sitecore.Support.Data.Eventing
     public ParallelSqlServerEventQueue([NotNull] SqlDataApi api, [NotNull] Database database)
       : base(api, database)
     {
-      Assert.ArgumentNotNull(api, "api");
-      Assert.ArgumentNotNull(database, "database");
+      Assert.ArgumentNotNull(api, nameof(api));
+      Assert.ArgumentNotNull(database, nameof(database));
 
       var useBaseFunctionality = database.Name != ParallelEventQueueSettings.DatabaseName;
-      this.UseBaseFunctionality = useBaseFunctionality;
+      UseBaseFunctionality = useBaseFunctionality;
 
       Log.Info("ParallelSqlServerEventQueue is {0} for {1}".FormatWith(useBaseFunctionality ? "disabled" : "enabled", database.Name), this);
 
-      this.EffectivePersistentTimestamp = new PrefixedPropertyTimeStamp(database, "EQStampEffective_");
+      EffectivePersistentTimestamp = new PrefixedPropertyTimeStamp(database, "EQStampEffective_");
 
-      if (this.UseBaseFunctionality)
+      if (UseBaseFunctionality)
       {
         return;
       }
 
-      this.StartThread();
+      StartThread();
     }
 
     [NotNull]
@@ -52,14 +52,14 @@ namespace Sitecore.Support.Data.Eventing
     /// </summary>
     protected override void DoProcessEvent([NotNull] Action<object, Type> handler, [NotNull] QueuedEvent queuedEvent)
     {
-      Assert.ArgumentNotNull(handler, "handler");
-      Assert.ArgumentNotNull(queuedEvent, "queuedEvent");
+      Assert.ArgumentNotNull(handler, nameof(handler));
+      Assert.ArgumentNotNull(queuedEvent, nameof(queuedEvent));
 
       if (queuedEvent.EventType == null || queuedEvent.InstanceType == null)
       {
         Log.Warn("Ignoring unknown event: " + queuedEvent.EventTypeName + ", instance: " + queuedEvent.InstanceTypeName + ", sender: " + queuedEvent.InstanceName, this);
 
-        this.MarkProcessed(queuedEvent);
+        MarkProcessed(queuedEvent);
       }
       else
       {
@@ -67,7 +67,7 @@ namespace Sitecore.Support.Data.Eventing
 
         // mark that event was taken to processing
         // reverted #1 to fix #5 EQSTamp_instance = queuedEvent.stamp
-        this.MarkProcessed(queuedEvent);
+        MarkProcessed(queuedEvent);
       }
     }
 
@@ -76,7 +76,7 @@ namespace Sitecore.Support.Data.Eventing
       // start threads
       Log.Info("Starting EventQueue background thread", this);
 
-      var thread = new Thread(this.DoProcessQueue)
+      var thread = new Thread(DoProcessQueue)
       {
         Name = "EventQueueThread",
         IsBackground = true
@@ -150,17 +150,17 @@ namespace Sitecore.Support.Data.Eventing
                 }
 
                 deserialize.Start();
-                var deserializeEvent = this.DeserializeEvent(queuedEvent);
+                var deserializeEvent = DeserializeEvent(queuedEvent);
                 deserialize.Stop();
 
                 process.Start();
                 pair.Handler(deserializeEvent, queuedEvent.InstanceType);
                 process.Stop();
 
-                this.MarkEffectiveProcessed(queuedEvent);
+                MarkEffectiveProcessed(queuedEvent);
                 if (HistoryEnabled)
                 {
-                  this.WriteHistory(deserializeEvent, queuedEvent, 1);
+                  WriteHistory(deserializeEvent, queuedEvent, 1);
                 }
               }
             }
@@ -178,26 +178,26 @@ namespace Sitecore.Support.Data.Eventing
           var processMs = process.ElapsedMilliseconds;
           var publishEndMs = publishEnd.ElapsedMilliseconds;
 
-          Log.Info(string.Format("Health.ProcessEQ.Count: {0}", count), this);
-          Log.Info(string.Format("Health.ProcessEQ.PublishEndCount: {0}", publishEndCount), this);
-          Log.Info(string.Format("Health.ProcessEQ.Time.Total: {0}", totalMs), this);
-          Log.Info(string.Format("Health.ProcessEQ.Time.Deserialize: {0}", deserializeMs), this);
-          Log.Info(string.Format("Health.ProcessEQ.Time.Process: {0}", processMs), this);
-          Log.Info(string.Format("Health.ProcessEQ.Time.PublishEndSleep: {0}", publishEndMs), this);
+          Log.Info($"Health.ProcessEQ.Count: {count}", this);
+          Log.Info($"Health.ProcessEQ.PublishEndCount: {publishEndCount}", this);
+          Log.Info($"Health.ProcessEQ.Time.Total: {totalMs}", this);
+          Log.Info($"Health.ProcessEQ.Time.Deserialize: {deserializeMs}", this);
+          Log.Info($"Health.ProcessEQ.Time.Process: {processMs}", this);
+          Log.Info($"Health.ProcessEQ.Time.PublishEndSleep: {publishEndMs}", this);
 
           if (HistoryEnabled)
           {
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Count",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.Count",
               taskStack: count.ToString());
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.PublishEndCount",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.PublishEndCount",
               taskStack: publishEndCount.ToString());
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Total",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Total",
               taskStack: totalMs.ToString());
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize",
               taskStack: deserializeMs.ToString());
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process",
               taskStack: processMs.ToString());
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.PublishEndSleep",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.Time.PublishEndSleep",
               taskStack: publishEndMs.ToString());
           }
 
@@ -208,20 +208,20 @@ namespace Sitecore.Support.Data.Eventing
             var processAvg = processMs / count;
             var publishEndAvg = publishEndMs / count;
 
-            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Total: {0}", totalAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Deserialize: {0}", deserializeAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Process: {0}", processAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.PublishEndSleep: {0}", publishEndAvg), this);
+            Log.Info($"Health.ProcessEQ.Time.Avg.Total: {totalAvg}", this);
+            Log.Info($"Health.ProcessEQ.Time.Avg.Deserialize: {deserializeAvg}", this);
+            Log.Info($"Health.ProcessEQ.Time.Avg.Process: {processAvg}", this);
+            Log.Info($"Health.ProcessEQ.Time.Avg.PublishEndSleep: {publishEndAvg}", this);
 
             if (HistoryEnabled)
             {
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Total",
+              History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Total",
               taskStack: totalAvg.ToString());
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize",
+              History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize",
               taskStack: deserializeAvg.ToString());
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process",
+              History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process",
               taskStack: processAvg.ToString());
-              this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.PublishEndSleep",
+              History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.PublishEndSleep",
               taskStack: publishEndAvg.ToString());
             }
           }
@@ -251,22 +251,22 @@ namespace Sitecore.Support.Data.Eventing
 
     private void MarkEffectiveProcessed([NotNull] QueuedEvent queuedEvent)
     {
-      Assert.ArgumentNotNull(queuedEvent, "queuedEvent");
+      Assert.ArgumentNotNull(queuedEvent, nameof(queuedEvent));
 
-      this.SetTimestampForLastEffectiveProcessing(new TimeStamp(queuedEvent.Timestamp));
+      SetTimestampForLastEffectiveProcessing(new TimeStamp(queuedEvent.Timestamp));
     }
 
     private void SetTimestampForLastEffectiveProcessing([NotNull] EventQueue.TimeStamp currentTimestamp)
     {
       Assert.ArgumentNotNull(currentTimestamp, nameof(currentTimestamp));
 
-      if (!(DateTime.UtcNow - this.EffectiveStampLastSaved > Settings.EventQueue.PersistStampInterval))
+      if (!(DateTime.UtcNow - EffectiveStampLastSaved > Settings.EventQueue.PersistStampInterval))
       {
         return;
       }
 
-      this.EffectivePersistentTimestamp.SaveTimestamp(currentTimestamp);
-      this.EffectiveStampLastSaved = DateTime.UtcNow;
+      EffectivePersistentTimestamp.SaveTimestamp(currentTimestamp);
+      EffectiveStampLastSaved = DateTime.UtcNow;
     }
 
     private class PrefixedPropertyTimeStamp : EventQueue.IPersistentTimestamp
@@ -279,17 +279,17 @@ namespace Sitecore.Support.Data.Eventing
 
       public PrefixedPropertyTimeStamp([NotNull] Database database, [NotNull] string prefix)
       {
-        Assert.ArgumentNotNull(database, "database");
-        Assert.ArgumentNotNull(prefix, "prefix");
+        Assert.ArgumentNotNull(database, nameof(database));
+        Assert.ArgumentNotNull(prefix, nameof(prefix));
 
         this.database = database;
-        this.Prefix = prefix;
+        Prefix = prefix;
       }
 
       [CanBeNull]
       public EventQueue.TimeStamp RetrieveTimestamp()
       {
-        string str = this.database.Properties[this.Prefix + Settings.InstanceName];
+        string str = database.Properties[Prefix + Settings.InstanceName];
         if (string.IsNullOrEmpty(str))
         {
           return null;
@@ -306,9 +306,9 @@ namespace Sitecore.Support.Data.Eventing
 
       public void SaveTimestamp([NotNull] EventQueue.TimeStamp value)
       {
-        Assert.ArgumentNotNull(value, "value");
+        Assert.ArgumentNotNull(value, nameof(value));
 
-        this.database.Properties[this.Prefix + Settings.InstanceName] = value.ToString();
+        database.Properties[Prefix + Settings.InstanceName] = value.ToString();
       }
     }
   }

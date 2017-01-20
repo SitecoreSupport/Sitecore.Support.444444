@@ -14,11 +14,11 @@ namespace Sitecore.Support.Data.ParallelEventQueue
 
     public EventHandlerPair([NotNull] Action<object, Type> handler, [NotNull] QueuedEvent queuedEvent)
     {
-      Assert.ArgumentNotNull(handler, "handler");
-      Assert.ArgumentNotNull(queuedEvent, "queuedEvent");
+      Assert.ArgumentNotNull(handler, nameof(handler));
+      Assert.ArgumentNotNull(queuedEvent, nameof(queuedEvent));
 
-      this.Handler = handler;
-      this.QueuedEvent = queuedEvent;
+      Handler = handler;
+      QueuedEvent = queuedEvent;
     }
   }
 }

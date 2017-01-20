@@ -48,18 +48,18 @@
     public HistoryLoggingEventQueue([NotNull] SqlDataApi api, [NotNull] Database database)
       : base(api, database)
     {
-      Assert.ArgumentNotNull(api, "api");
-      Assert.ArgumentNotNull(database, "database");
+      Assert.ArgumentNotNull(api, nameof(api));
+      Assert.ArgumentNotNull(database, nameof(database));
 
       var databaseName = database.Name;
 
       HistoryEnabled = EventQueueSettings.HistoryEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
       HistoryDetailsEnabled = EventQueueSettings.HistoryDetailsEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
 
-      this.DatabaseName = databaseName;
-      this.NextLogTime = DateTime.UtcNow;
-      this.LogInterval = EventQueueSettings.LogInterval;
-      this.History = new SqlServerHistoryProvider(databaseName);
+      DatabaseName = databaseName;
+      NextLogTime = DateTime.UtcNow;
+      LogInterval = EventQueueSettings.LogInterval;
+      History = new SqlServerHistoryProvider(databaseName);
 
       if (!HistoryEnabled)
       {
@@ -78,15 +78,15 @@
     {
       get
       {
-        return this.NextLogTime <= DateTime.UtcNow;
+        return NextLogTime <= DateTime.UtcNow;
       }
     }
 
     public override void ProcessEvents([NotNull] Action<object, Type> handler)
     {
-      Assert.ArgumentNotNull(handler, "handler");
+      Assert.ArgumentNotNull(handler, nameof(handler));
 
-      if (!this.ListenToRemoteEvents)
+      if (!ListenToRemoteEvents)
       {
         return;
       }
@@ -100,9 +100,9 @@
 
       lock (this)
       {
-        var mainCount = this.EventsCount;
-        var mainTotal = this.TotalTime;
-        var mainRead = this.ReadTime;
+        var mainCount = EventsCount;
+        var mainTotal = TotalTime;
+        var mainRead = ReadTime;
 
         mainTotal.Start();
         mainRead.Start();
@@ -110,23 +110,20 @@
         var securityDisabler = EventQueueSettings.SecurityDisabler ? new SecurityDisabler() : null;
         try
         {
-          var queuedEvents = this.GetQueuedEvents(this.InstanceName);
+          var queuedEvents = GetQueuedEvents(InstanceName);
 
-          this.DoProcessEvents(handler, queuedEvents, mainRead, mainCount);
+          DoProcessEvents(handler, queuedEvents, mainRead, mainCount);
         }
         finally
         {
-          if (securityDisabler != null)
-          {
-            securityDisabler.Dispose();
-          }
+          securityDisabler?.Dispose();
 
           mainRead.Stop();
           mainTotal.Stop();
 
-          if (this.CanLogCounters)
+          if (CanLogCounters)
           {
-            this.LogAndResetCounters();
+            LogAndResetCounters();
           }
         }
       }
@@ -134,24 +131,24 @@
 
     protected virtual void DoProcessEvents([NotNull] Action<object, Type> handler, [NotNull] IEnumerable<QueuedEvent> queuedEvents, [NotNull] Stopwatch mainRead, [NotNull] SimpleCounter mainCount)
     {
-      Assert.ArgumentNotNull(handler, "handler");
-      Assert.ArgumentNotNull(queuedEvents, "queuedEvents");
-      Assert.ArgumentNotNull(mainRead, "mainRead");
-      Assert.ArgumentNotNull(mainCount, "mainCount");
+      Assert.ArgumentNotNull(handler, nameof(handler));
+      Assert.ArgumentNotNull(queuedEvents, nameof(queuedEvents));
+      Assert.ArgumentNotNull(mainRead, nameof(mainRead));
+      Assert.ArgumentNotNull(mainCount, nameof(mainCount));
 
-      if (!this.ListenToRemoteEvents)
+      if (!ListenToRemoteEvents)
       {
         return;
       }
 
       lock (this)
       {
-        foreach (var queuedEvent in this.GetQueuedEvents(this.InstanceName))
+        foreach (var queuedEvent in GetQueuedEvents(InstanceName))
         {
           mainRead.Stop();
           mainCount.Increment();
 
-          this.DoProcessEvent(handler, queuedEvent);
+          DoProcessEvent(handler, queuedEvent);
 
           mainRead.Start();
         }
@@ -160,29 +157,29 @@
 
     protected virtual void DoProcessEvent([NotNull] Action<object, Type> handler, [NotNull] QueuedEvent queuedEvent)
     {
-      Assert.ArgumentNotNull(handler, "handler");
-      Assert.ArgumentNotNull(queuedEvent, "queuedEvent");
+      Assert.ArgumentNotNull(handler, nameof(handler));
+      Assert.ArgumentNotNull(queuedEvent, nameof(queuedEvent));
       if (queuedEvent.EventType == null || queuedEvent.InstanceType == null)
       {
         Log.Warn("Ignoring unknown event: " + queuedEvent.EventTypeName + ", instance: " + queuedEvent.InstanceTypeName + ", sender: " + queuedEvent.InstanceName, this);
 
-        this.MarkProcessed(queuedEvent);
+        MarkProcessed(queuedEvent);
       }
       else
       {
-        this.DeserializeTime.Start();
-        var deserializedEvent = this.DeserializeEvent(queuedEvent);
-        this.DeserializeTime.Stop();
+        DeserializeTime.Start();
+        var deserializedEvent = DeserializeEvent(queuedEvent);
+        DeserializeTime.Stop();
 
-        this.ProcessTime.Start();
+        ProcessTime.Start();
         handler(deserializedEvent, queuedEvent.InstanceType);
-        this.ProcessTime.Stop();
+        ProcessTime.Stop();
 
-        this.MarkProcessed(queuedEvent);
+        MarkProcessed(queuedEvent);
 
         if (HistoryEnabled && HistoryDetailsEnabled)
         {
-          this.WriteHistory(deserializedEvent, queuedEvent, 0);
+          WriteHistory(deserializedEvent, queuedEvent, 0);
         }
       }
     }
@@ -190,42 +187,42 @@
     [NotNull]
     protected virtual object DeserializeEvent([NotNull] QueuedEvent queuedEvent)
     {
-      Assert.ArgumentNotNull(queuedEvent, "queuedEvent");
+      Assert.ArgumentNotNull(queuedEvent, nameof(queuedEvent));
 
-      return this.Serializer.Deserialize(queuedEvent.InstanceData, queuedEvent.InstanceType);
+      return Serializer.Deserialize(queuedEvent.InstanceData, queuedEvent.InstanceType);
     }
 
     protected virtual void LogAndResetCounters()
     {
-      var queueSize = this.GetQueuedEventCount();
-      var mainCount = this.EventsCount;
-      var mainTotal = this.TotalTime;
-      var mainRead = this.ReadTime;
+      var queueSize = GetQueuedEventCount();
+      var mainCount = EventsCount;
+      var mainTotal = TotalTime;
+      var mainRead = ReadTime;
 
       var count = mainCount.Value;
       var totalMs = mainTotal.ElapsedMilliseconds;
       var readMs = mainRead.ElapsedMilliseconds;
 
-      Log.Info(string.Format("Health.EventQueue.Size: {0}", queueSize), this);
-      Log.Info(string.Format("Health.ReadEQ.Count: {0}", count), this);
-      Log.Info(string.Format("Health.ReadEQ.Time.Total: {0}", totalMs), this);
-      Log.Info(string.Format("Health.ReadEQ.Time.Read: {0}", readMs), this);
+      Log.Info($"Health.EventQueue.Size: {queueSize}", this);
+      Log.Info($"Health.ReadEQ.Count: {count}", this);
+      Log.Info($"Health.ReadEQ.Time.Total: {totalMs}", this);
+      Log.Info($"Health.ReadEQ.Time.Read: {readMs}", this);
 
       if (HistoryEnabled)
       {
-        this.History.AddHistoryEntry("Statistics", "EQ.Size",
+        History.AddHistoryEntry("Statistics", "EQ.Size",
           taskStack: queueSize.ToString(),
           userName: string.Empty);
 
-        this.History.AddHistoryEntry("Statistics", "ReadEQ.Count",
+        History.AddHistoryEntry("Statistics", "ReadEQ.Count",
           taskStack: count.ToString(),
           userName: string.Empty);
 
-        this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Total",
+        History.AddHistoryEntry("Statistics", "ReadEQ.Time.Total",
           taskStack: totalMs.ToString(),
           userName: string.Empty);
 
-        this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Read",
+        History.AddHistoryEntry("Statistics", "ReadEQ.Time.Read",
           taskStack: readMs.ToString(),
           userName: string.Empty);
       }
@@ -235,35 +232,35 @@
         var totalAvg = totalMs / count;
         var readAvg = readMs / count;
 
-        Log.Info(string.Format("Health.ReadEQ.Time.Avg.Total: {0}", totalAvg), this);
-        Log.Info(string.Format("Health.ReadEQ.Time.Avg.Read: {0}", readAvg), this);
+        Log.Info($"Health.ReadEQ.Time.Avg.Total: {totalAvg}", this);
+        Log.Info($"Health.ReadEQ.Time.Avg.Read: {readAvg}", this);
 
         if (HistoryEnabled)
         {
-          this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Total",
+          History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Total",
           taskStack: totalAvg.ToString(),
           userName: string.Empty);
 
-          this.History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Read",
+          History.AddHistoryEntry("Statistics", "ReadEQ.Time.Avg.Read",
           taskStack: readAvg.ToString(),
           userName: string.Empty);
         }
       }
 
-      this.LogAndResetProcessCounters();
+      LogAndResetProcessCounters();
 
       mainCount.Reset();
       mainTotal.Reset();
       mainRead.Reset();
 
-      this.NextLogTime = DateTime.UtcNow + this.LogInterval;
+      NextLogTime = DateTime.UtcNow + LogInterval;
     }
 
     protected virtual void LogAndResetProcessCounters()
     {
-      var mainCount = this.EventsCount;
-      var mainDeserialize = this.DeserializeTime;
-      var mainProcess = this.ProcessTime;
+      var mainCount = EventsCount;
+      var mainDeserialize = DeserializeTime;
+      var mainProcess = ProcessTime;
 
       var count = mainCount.Value;
       if (count > 0)
@@ -271,17 +268,16 @@
         var deserializeMs = mainDeserialize.ElapsedMilliseconds;
         var processMs = mainProcess.ElapsedMilliseconds;
 
-        Log.Info(string.Format("Health.ProcessEQ.Time.Deserialize: {0}", deserializeMs), this);
-        Log.Info(string.Format("Health.ProcessEQ.Time.Process: {0}", processMs), this);
+        Log.Info($"Health.ProcessEQ.Time.Deserialize: {deserializeMs}", this);
+        Log.Info($"Health.ProcessEQ.Time.Process: {processMs}", this);
 
-        var historyLogEnabled = EventQueueSettings.HistoryEnabledDatabases;
         if (HistoryEnabled)
         {
-          this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize",
+          History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize",
           taskStack: deserializeMs.ToString(),
           userName: string.Empty);
 
-          this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process",
+          History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Process",
           taskStack: processMs.ToString(),
           userName: string.Empty);
         }
@@ -291,16 +287,16 @@
           var deserializeAvg = deserializeMs / count;
           var processAvg = processMs / count;
 
-          Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Deserialize: {0}", deserializeAvg), this);
-          Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Process: {0}", processAvg), this);
+          Log.Info($"Health.ProcessEQ.Time.Avg.Deserialize: {deserializeAvg}", this);
+          Log.Info($"Health.ProcessEQ.Time.Avg.Process: {processAvg}", this);
 
           if (HistoryEnabled)
           {
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Deserialize",
           taskStack: deserializeAvg.ToString(),
           userName: string.Empty);
 
-            this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process",
+            History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Avg.Process",
           taskStack: processAvg.ToString(),
           userName: string.Empty);
           }
@@ -313,14 +309,14 @@
 
     protected void WriteHistory([NotNull] object eventObject, [NotNull] QueuedEvent queuedEvent, int thread)
     {
-      Assert.ArgumentNotNull(eventObject, "eventObject");
-      Assert.ArgumentNotNull(queuedEvent, "queuedEvent");
+      Assert.ArgumentNotNull(eventObject, nameof(eventObject));
+      Assert.ArgumentNotNull(queuedEvent, nameof(queuedEvent));
 
       var eventName = queuedEvent.EventType.Name;
       var eventBase = eventObject as ItemRemoteEventBase;
       if (eventBase != null)
       {
-        this.History.AddHistoryEntry("Event", eventName, 
+        History.AddHistoryEntry("Event", eventName, 
           itemId: ID.Parse(eventBase.ItemId), 
           language: eventBase.LanguageName, 
           version: eventBase.VersionNumber,
@@ -333,7 +329,7 @@
       var publishEnd = eventObject as PublishEndRemoteEvent;
       if (publishEnd != null)
       {
-        this.History.AddHistoryEntry("Event", eventName, 
+        History.AddHistoryEntry("Event", eventName, 
           itemId: ID.Parse(publishEnd.RootItemId), 
           language: publishEnd.LanguageName,
           taskStack: thread.ToString(),
@@ -342,7 +338,7 @@
         return;
       }
 
-      this.History.AddHistoryEntry("Event", eventName,
+      History.AddHistoryEntry("Event", eventName,
           taskStack: queuedEvent.Created.ToString(DateTimeFormat));
     }
   }
