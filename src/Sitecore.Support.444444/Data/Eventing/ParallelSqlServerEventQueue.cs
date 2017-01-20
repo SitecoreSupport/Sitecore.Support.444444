@@ -31,7 +31,7 @@ namespace Sitecore.Support.Data.Eventing
       Assert.ArgumentNotNull(api, "api");
       Assert.ArgumentNotNull(database, "database");
 
-      var useBaseFunctionality = database.Name != ParallelEventQueueSettings.DatabaseName.Value;
+      var useBaseFunctionality = database.Name != ParallelEventQueueSettings.DatabaseName;
       this.UseBaseFunctionality = useBaseFunctionality;
 
       Log.Info("ParallelSqlServerEventQueue is {0} for {1}".FormatWith(useBaseFunctionality ? "disabled" : "enabled", database.Name), this);
@@ -56,7 +56,7 @@ namespace Sitecore.Support.Data.Eventing
       else
       {
         this.queueIndex++;
-        if (this.queueIndex >= ParallelEventQueueSettings.ParallelThreadsCount.Value)
+        if (this.queueIndex >= ParallelEventQueueSettings.ParallelThreadsCount)
         {
           this.queueIndex = 0;
         }
@@ -73,7 +73,7 @@ namespace Sitecore.Support.Data.Eventing
 
     protected void StartThreads()
     {
-      var count = ParallelEventQueueSettings.ParallelThreadsCount.Value;
+      var count = ParallelEventQueueSettings.ParallelThreadsCount;
       Assert.IsTrue(count >= 1, "With EventQueue.ParallelThreadsCount < 1 there is no sense in using ParallelSqlServerEventQueue");
 
       var processedEvents = new QueuedEvent[count];
@@ -139,7 +139,7 @@ namespace Sitecore.Support.Data.Eventing
         while (true)
         {
           total.Start();
-          if (securityDisablerEnabled.Value && securityDisabler == null)
+          if (securityDisablerEnabled && securityDisabler == null)
           {
             securityDisabler = new SecurityDisabler();
           }
@@ -152,11 +152,11 @@ namespace Sitecore.Support.Data.Eventing
           if (queue.IsEmpty)
           {
             total.Stop();
-            Thread.Sleep(deepSleep.Value);
+            Thread.Sleep(deepSleep);
           }
           else
           {
-            for (var i = 0; i < ParallelEventQueueSettings.EventQueueThreadBatchSize.Value; ++i)
+            for (var i = 0; i < ParallelEventQueueSettings.EventQueueThreadBatchSize; ++i)
             {
               EventHandlerPair pair;
               if (!queue.TryDequeue(out pair))
@@ -178,7 +178,7 @@ namespace Sitecore.Support.Data.Eventing
                 {
                   publishEndCount++;
 
-                  if (publishEndSync.Value && threadsCount.Value > 1)
+                  if (publishEndSync && threadsCount > 1)
                   {
                     // wait for other threads process all events that were before publish:end:remote
                     while (true)
@@ -189,7 +189,7 @@ namespace Sitecore.Support.Data.Eventing
                       }
 
                       publishEnd.Start();
-                      Thread.Sleep(publishEndSleep.Value);
+                      Thread.Sleep(publishEndSleep);
                       publishEnd.Stop();
                     }
                   }
@@ -207,7 +207,7 @@ namespace Sitecore.Support.Data.Eventing
                 timeStamps[threadNumber] = queuedEvent;
 
                 this.MarkEffectiveProcessed(queuedEvent);
-                if (historyEnabled.Value)
+                if (historyEnabled)
                 {
                   this.WriteHistory(deserializeEvent, queuedEvent, threadNumber);
                 }
@@ -235,7 +235,7 @@ namespace Sitecore.Support.Data.Eventing
           Log.Info(string.Format("Health.ProcessEQ{0}.Time.PublishEndSleep: {1}", threadNumber, publishEndMs), this);
 
           var taskStack = threadNumber.ToString();
-          var historyLogEnabled = historyEnabled.Value;
+          var historyLogEnabled = historyEnabled;
           if (historyLogEnabled)
           {
             this.History.AddHistoryEntry("Statistics", "ProcessEQ.Count", ID.Null, count.ToString(), taskStack: taskStack, userName: string.Empty);
@@ -274,7 +274,7 @@ namespace Sitecore.Support.Data.Eventing
           process.Reset();
           publishEnd.Reset();
 
-          nextLogTime = DateTime.UtcNow + logInterval.Value;
+          nextLogTime = DateTime.UtcNow + logInterval;
         }
       }
       catch (Exception ex)

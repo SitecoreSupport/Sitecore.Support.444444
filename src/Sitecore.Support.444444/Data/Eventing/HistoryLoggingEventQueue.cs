@@ -26,7 +26,7 @@
 
     protected readonly bool UseBaseFunctionality;
 
-    private readonly AdvancedSetting<TimeSpan> LogInterval;
+    private readonly TimeSpan LogInterval;
 
     [NotNull]
     private readonly Stopwatch TotalTime = new Stopwatch();
@@ -50,7 +50,7 @@
       Assert.ArgumentNotNull(database, "database");
 
       var databaseName = database.Name;
-      var useBaseFunctionality = databaseName != EventQueueSettings.DatabaseName.Value;
+      var useBaseFunctionality = databaseName != EventQueueSettings.DatabaseName;
 
       this.UseBaseFunctionality = useBaseFunctionality;
       this.DatabaseName = databaseName;
@@ -62,8 +62,7 @@
         return;
       }
 
-      this.InitializeHistory();
-      SettingBasedAdvancedHistoryProvider.Provider.ValueChanged += (x, y) => this.InitializeHistory();
+      this.InitializeHistory();      
 
       Log.Info("Support HistoryLoggingEventQueue is configured for {0} database".FormatWith(databaseName), this);
     }
@@ -106,7 +105,7 @@
         mainTotal.Start();
         mainRead.Start();
 
-        var securityDisabler = EventQueueSettings.SecurityDisabler.Value ? new SecurityDisabler() : null;
+        var securityDisabler = EventQueueSettings.SecurityDisabler ? new SecurityDisabler() : null;
         try
         {
           var queuedEvents = this.GetQueuedEvents(this.InstanceName);
@@ -179,7 +178,7 @@
 
         this.MarkProcessed(queuedEvent);
 
-        if (EventQueueSettings.HistoryEnabled.Value && EventQueueSettings.HistoryDetailsEnabled.Value)
+        if (EventQueueSettings.HistoryEnabled && EventQueueSettings.HistoryDetailsEnabled)
         {
           this.WriteHistory(deserializedEvent, queuedEvent, 0);
         }
@@ -210,7 +209,7 @@
       Log.Info(string.Format("Health.ReadEQ.Time.Total: {0}", totalMs), this);
       Log.Info(string.Format("Health.ReadEQ.Time.Read: {0}", readMs), this);
 
-      var historyLogEnabled = EventQueueSettings.HistoryEnabled.Value;
+      var historyLogEnabled = EventQueueSettings.HistoryEnabled;
       if (historyLogEnabled)
       {
         this.History.AddHistoryEntry("Statistics", "EQ.Size", ID.Null, queueSize.ToString(), userName: string.Empty);
@@ -240,7 +239,7 @@
       mainTotal.Reset();
       mainRead.Reset();
 
-      this.NextLogTime = DateTime.UtcNow + this.LogInterval.Value;
+      this.NextLogTime = DateTime.UtcNow + this.LogInterval;
     }
 
     protected virtual void LogAndResetProcessCounters()
@@ -258,7 +257,7 @@
         Log.Info(string.Format("Health.ProcessEQ.Time.Deserialize: {0}", deserializeMs), this);
         Log.Info(string.Format("Health.ProcessEQ.Time.Process: {0}", processMs), this);
 
-        var historyLogEnabled = EventQueueSettings.HistoryEnabled.Value;
+        var historyLogEnabled = EventQueueSettings.HistoryEnabled;
         if (historyLogEnabled)
         {
           this.History.AddHistoryEntry("Statistics", "ProcessEQ.Time.Deserialize", ID.Null, deserializeMs.ToString(), userName: string.Empty);

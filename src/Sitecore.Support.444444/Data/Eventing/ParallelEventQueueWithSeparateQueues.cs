@@ -28,7 +28,7 @@
 
       // create queues for events
       this.queues = Enumerable
-        .Range(0, ParallelEventQueueSettings.ParallelThreadsCount.Value)
+        .Range(0, ParallelEventQueueSettings.ParallelThreadsCount)
         .Select(x => new ConcurrentQueue<EventHandlerPair>())
         .ToArray();
       

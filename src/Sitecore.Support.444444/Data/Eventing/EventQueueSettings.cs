@@ -1,17 +1,18 @@
 namespace Sitecore.Support.Data.Eventing
 {
   using System;
+  using Sitecore.Configuration;
 
   public static class EventQueueSettings
   {
-    public static readonly AdvancedSetting<string> DatabaseName = AdvancedSettings.Create("EventQueue.DatabaseName", "web");
+    public static readonly string DatabaseName = Settings.GetSetting("EventQueue.DatabaseName", "web");
 
-    public static readonly AdvancedSetting<bool> HistoryEnabled = AdvancedSettings.Create("EventQueue.HistoryEnabled", true);
+    public static readonly bool HistoryEnabled = Settings.GetBoolSetting("EventQueue.HistoryEnabled", true);
 
-    public static readonly AdvancedSetting<bool> HistoryDetailsEnabled = AdvancedSettings.Create("EventQueue.HistoryDetailsEnabled", true);
+    public static readonly bool HistoryDetailsEnabled = Settings.GetBoolSetting("EventQueue.HistoryDetailsEnabled", true);
 
-    public static readonly AdvancedSetting<bool> SecurityDisabler = AdvancedSettings.Create("EventQueue.SecurityDisabler", false);
+    public static readonly bool SecurityDisabler = Settings.GetBoolSetting("EventQueue.SecurityDisabler", false);
 
-    public static readonly AdvancedSetting<TimeSpan> LogInterval = AdvancedSettings.Create("EventQueue.MainThread.LogInterval", new TimeSpan(0, 0, 5, 0));
+    public static readonly TimeSpan LogInterval = Settings.GetTimeSpanSetting("EventQueue.MainThread.LogInterval", new TimeSpan(0, 0, 5, 0));
   }
 }

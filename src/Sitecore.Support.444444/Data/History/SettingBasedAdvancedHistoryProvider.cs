@@ -1,11 +1,14 @@
 namespace Sitecore.AdvancedHistory
 {
+  using Sitecore.Configuration;
   using Sitecore.Diagnostics;
+  using Sitecore.Support;
+  using Sitecore.Support.Data.Eventing;
 
   [UsedImplicitly]
   public class SettingBasedAdvancedHistoryProvider : AdvancedHistoryProvider
   {
-    public static readonly AdvancedSetting<string> Provider = AdvancedSettings.Create("AdvancedHistory.Provider", "sql");
+    public static readonly string Provider = Settings.GetSetting("AdvancedHistory.Provider", "sql");
     
     public override AdvancedDatabaseHistoryProvider GetDatabaseHistoryProvider(string databaseName)
     {
@@ -25,7 +28,7 @@ namespace Sitecore.AdvancedHistory
     {
       Assert.ArgumentNotNull(databaseName, "databaseName");
 
-      return AdvancedHistoryManager.Providers[Provider.Value];
+      return AdvancedHistoryManager.Providers[Provider];
     }
   }
 }
