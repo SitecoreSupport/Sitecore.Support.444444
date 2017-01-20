@@ -4,6 +4,7 @@
   using System.Collections.Generic;
   using System.Diagnostics;
   using System.Linq;
+  using Sitecore.Configuration;
   using Sitecore.Data;
   using Sitecore.Data.DataProviders.Sql;
   using Sitecore.Data.Eventing;
@@ -53,12 +54,12 @@
 
       var databaseName = database.Name;
 
-      HistoryEnabled = EventQueueSettings.HistoryEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
-      HistoryDetailsEnabled = EventQueueSettings.HistoryDetailsEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
+      HistoryEnabled = HistorySettings.HistoryEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
+      HistoryDetailsEnabled = HistorySettings.HistoryDetailsEnabledDatabases.Any(x => string.Equals(databaseName, x, StringComparison.OrdinalIgnoreCase));
 
       DatabaseName = databaseName;
       NextLogTime = DateTime.UtcNow;
-      LogInterval = EventQueueSettings.LogInterval;
+      LogInterval = HistorySettings.LogInterval;
       History = new SqlServerHistoryProvider(databaseName);
 
       if (!HistoryEnabled)
@@ -107,7 +108,7 @@
         mainTotal.Start();
         mainRead.Start();
 
-        var securityDisabler = EventQueueSettings.SecurityDisabler ? new SecurityDisabler() : null;
+        var securityDisabler = HistorySettings.SecurityDisabler ? new SecurityDisabler() : null;
         try
         {
           var queuedEvents = GetQueuedEvents(InstanceName);
@@ -340,6 +341,17 @@
 
       History.AddHistoryEntry("Event", eventName,
           taskStack: queuedEvent.Created.ToString(DateTimeFormat));
+    }
+
+    public static class HistorySettings
+    {
+      public static readonly IReadOnlyList<string> HistoryEnabledDatabases = Settings.GetSetting("EventQueue.HistoryLogging.EnabledDatabases", "core|master|web").Split('|');
+
+      public static readonly IReadOnlyList<string> HistoryDetailsEnabledDatabases = Settings.GetSetting("EventQueue.HistoryLogging.DetailsEnabledDatabases", "web").Split('|');
+
+      public static readonly bool SecurityDisabler = Settings.GetBoolSetting("EventQueue.SecurityDisabler", true);
+
+      public static readonly TimeSpan LogInterval = Settings.GetTimeSpanSetting("EventQueue.MainThread.LogInterval", new TimeSpan(0, 0, 5, 0));
     }
   }
 }

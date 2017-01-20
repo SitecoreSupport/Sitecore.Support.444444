@@ -52,9 +52,7 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\Eventing\EventQueueSettings.cs" />
     <Compile Include="Data\Eventing\HistoryLoggingEventQueue.cs" />
-    <Compile Include="Data\Eventing\ParallelEventQueueSettings.cs" />
     <Compile Include="Data\Eventing\ParallelSqlServerEventQueue.cs" />
     <Compile Include="Data\ParallelEventQueue\EventHandlerPair.cs" />
     <Compile Include="Data\SqlServer\DatabasePropertiesProvider.cs" />

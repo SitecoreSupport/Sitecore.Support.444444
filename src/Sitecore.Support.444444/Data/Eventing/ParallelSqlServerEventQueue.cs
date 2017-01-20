@@ -2,7 +2,9 @@ namespace Sitecore.Support.Data.Eventing
 {
   using System;
   using System.Collections.Concurrent;
+  using System.Collections.Generic;
   using System.Diagnostics;
+  using System.Linq;
   using System.Threading;
   using Sitecore.Configuration;
   using Sitecore.Data;
@@ -11,15 +13,12 @@ namespace Sitecore.Support.Data.Eventing
   using Sitecore.Eventing;
   using Sitecore.Eventing.Remote;
   using Sitecore.SecurityModel;
-  using Sitecore.StringExtensions;
   using Sitecore.Support.Data.ParallelEventQueue;
 
   public class ParallelSqlServerEventQueue : HistoryLoggingEventQueue
   {
     [NotNull]
     protected readonly EventQueue.IPersistentTimestamp EffectivePersistentTimestamp;
-
-    protected readonly bool UseBaseFunctionality;
 
     private DateTime EffectiveStampLastSaved = DateTime.UtcNow;
 
@@ -29,20 +28,29 @@ namespace Sitecore.Support.Data.Eventing
       Assert.ArgumentNotNull(api, nameof(api));
       Assert.ArgumentNotNull(database, nameof(database));
 
-      var useBaseFunctionality = database.Name != ParallelEventQueueSettings.DatabaseName;
-      UseBaseFunctionality = useBaseFunctionality;
-
-      Log.Info("ParallelSqlServerEventQueue is {0} for {1}".FormatWith(useBaseFunctionality ? "disabled" : "enabled", database.Name), this);
-
+      var databaseName = database.Name;
+      ParallelProcessingEnabled = ParallelProcessingSettings.DatabaseNames.Any(x => String.Equals(x, databaseName, StringComparison.OrdinalIgnoreCase));
+      
       EffectivePersistentTimestamp = new PrefixedPropertyTimeStamp(database, "EQStampEffective_");
 
-      if (UseBaseFunctionality)
+      if (!ParallelProcessingEnabled)
       {
         return;
       }
 
-      StartThread();
+      // start threads
+      Log.Info($"Starting EventQueue background thread for {databaseName}", this);
+
+      var thread = new Thread(DoProcessQueue)
+      {
+        Name = $"EventQueueThread-{databaseName}",
+        IsBackground = true
+      };
+
+      thread.Start(Queue);
     }
+
+    public bool ParallelProcessingEnabled { get; }
 
     [NotNull]
     protected ConcurrentQueue<EventHandlerPair> Queue { get; } = new ConcurrentQueue<EventHandlerPair>();
@@ -69,32 +77,14 @@ namespace Sitecore.Support.Data.Eventing
         // reverted #1 to fix #5 EQSTamp_instance = queuedEvent.stamp
         MarkProcessed(queuedEvent);
       }
-    }
+    }           
 
-    protected void StartThread()
+    private void DoProcessQueue()
     {
-      // start threads
-      Log.Info("Starting EventQueue background thread", this);
-
-      var thread = new Thread(DoProcessQueue)
-      {
-        Name = "EventQueueThread",
-        IsBackground = true
-      };
-
-      thread.Start(Queue);
-    }
-
-    private void DoProcessQueue([NotNull] object obj)
-    {
-      Assert.ArgumentNotNull(obj, nameof(obj));
-
-      var queue = (ConcurrentQueue<EventHandlerPair>)obj;
-
-      SecurityDisabler securityDisabler = null;
-
+      SecurityDisabler securityDisabler = null;       
       try
       {
+        var queue = Queue;
         var count = 0;
         var publishEndCount = 0;
         var deserialize = new Stopwatch();
@@ -102,9 +92,9 @@ namespace Sitecore.Support.Data.Eventing
         var publishEnd = new Stopwatch();
         var total = new Stopwatch();
 
-        var deepSleep = ParallelEventQueueSettings.EventQueueThreadDeepSleep;
-        var securityDisablerEnabled = EventQueueSettings.SecurityDisabler;
-        var logInterval = ParallelEventQueueSettings.EventQueueThreadLogInterval;
+        var deepSleep = ParallelProcessingSettings.DeepSleep;
+        var securityDisablerEnabled = HistorySettings.SecurityDisabler;
+        var logInterval = ParallelProcessingSettings.LogInterval;
         var nextLogTime = DateTime.UtcNow;
 
         while (true)
@@ -127,7 +117,7 @@ namespace Sitecore.Support.Data.Eventing
           }
           else
           {
-            for (var i = 0; i < ParallelEventQueueSettings.EventQueueThreadBatchSize; ++i)
+            for (var i = 0; i < ParallelProcessingSettings.BatchSize; ++i)
             {
               EventHandlerPair pair;
               if (!queue.TryDequeue(out pair))
@@ -178,12 +168,12 @@ namespace Sitecore.Support.Data.Eventing
           var processMs = process.ElapsedMilliseconds;
           var publishEndMs = publishEnd.ElapsedMilliseconds;
 
-          Log.Info($"Health.ProcessEQ.Count: {count}", this);
-          Log.Info($"Health.ProcessEQ.PublishEndCount: {publishEndCount}", this);
-          Log.Info($"Health.ProcessEQ.Time.Total: {totalMs}", this);
-          Log.Info($"Health.ProcessEQ.Time.Deserialize: {deserializeMs}", this);
-          Log.Info($"Health.ProcessEQ.Time.Process: {processMs}", this);
-          Log.Info($"Health.ProcessEQ.Time.PublishEndSleep: {publishEndMs}", this);
+          Log.Info($"Health.ProcessEQ[{DatabaseName}].Count: {count}", this);
+          Log.Info($"Health.ProcessEQ[{DatabaseName}].PublishEndCount: {publishEndCount}", this);
+          Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.Total: {totalMs}", this);
+          Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.Deserialize: {deserializeMs}", this);
+          Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.Process: {processMs}", this);
+          Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.PublishEndSleep: {publishEndMs}", this);
 
           if (HistoryEnabled)
           {
@@ -208,10 +198,10 @@ namespace Sitecore.Support.Data.Eventing
             var processAvg = processMs / count;
             var publishEndAvg = publishEndMs / count;
 
-            Log.Info($"Health.ProcessEQ.Time.Avg.Total: {totalAvg}", this);
-            Log.Info($"Health.ProcessEQ.Time.Avg.Deserialize: {deserializeAvg}", this);
-            Log.Info($"Health.ProcessEQ.Time.Avg.Process: {processAvg}", this);
-            Log.Info($"Health.ProcessEQ.Time.Avg.PublishEndSleep: {publishEndAvg}", this);
+            Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.Avg.Total: {totalAvg}", this);
+            Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.Avg.Deserialize: {deserializeAvg}", this);
+            Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.Avg.Process: {processAvg}", this);
+            Log.Info($"Health.ProcessEQ[{DatabaseName}].Time.Avg.PublishEndSleep: {publishEndAvg}", this);
 
             if (HistoryEnabled)
             {
@@ -238,14 +228,11 @@ namespace Sitecore.Support.Data.Eventing
       }
       catch (Exception ex)
       {
-        Log.Fatal(string.Format("ParallelEventQueue background thread crashed."), ex, this);
+        Log.Fatal($"ParallelEventQueue[{DatabaseName}] background thread crashed.", ex, this);
       }
       finally
       {
-        if (securityDisabler != null)
-        {
-          securityDisabler.Dispose();
-        }
+        securityDisabler?.Dispose();
       }
     }
 
@@ -290,7 +277,7 @@ namespace Sitecore.Support.Data.Eventing
       public EventQueue.TimeStamp RetrieveTimestamp()
       {
         string str = database.Properties[Prefix + Settings.InstanceName];
-        if (string.IsNullOrEmpty(str))
+        if (String.IsNullOrEmpty(str))
         {
           return null;
         }
@@ -310,6 +297,18 @@ namespace Sitecore.Support.Data.Eventing
 
         database.Properties[Prefix + Settings.InstanceName] = value.ToString();
       }
+    }
+
+    public static class ParallelProcessingSettings
+    {
+      [NotNull]
+      public static readonly IReadOnlyList<string> DatabaseNames = Settings.GetSetting("EventQueue.ParallelProcessing.EnabledDatabases", "core|master|web").Split('|');
+
+      public static readonly int DeepSleep = Settings.GetIntSetting("EventQueue.ParallelProcessing.DeepSleep", 1000);
+
+      public static readonly int BatchSize = Settings.GetIntSetting("EventQueue.ParallelProcessing.BatchSize", 1000);
+
+      public static readonly TimeSpan LogInterval = Settings.GetTimeSpanSetting("EventQueue.ParallelProcessing.LogInterval", new TimeSpan(0, 0, 5, 0));
     }
   }
 }
