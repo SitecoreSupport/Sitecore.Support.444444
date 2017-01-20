@@ -1,4 +1,4 @@
-﻿namespace Sitecore.Abstract.Data.SqlServer
+﻿namespace Sitecore.Support.Data.SqlServer
 {
   using System.Collections.Generic;
   using Sitecore.Data.DataProviders;

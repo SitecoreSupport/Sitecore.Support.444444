@@ -1,9 +1,8 @@
-﻿namespace Sitecore.Abstract.Data.SqlServer
+﻿namespace Sitecore.Support.Data.SqlServer
 {
   using System;
   using System.Collections.Generic;
   using System.Threading;
-  using Sitecore.Support.Reflection;
   using Sitecore.Caching;
   using Sitecore.Collections;
   using Sitecore.Data;
@@ -15,6 +14,7 @@
   using Sitecore.Diagnostics;
   using Sitecore.Eventing;
   using Sitecore.Reflection;
+  using Sitecore.Support.Reflection;
 
   [UsedImplicitly]
   public class SqlServerDataProvider : Sitecore.Data.SqlServer.SqlServerDataProvider
