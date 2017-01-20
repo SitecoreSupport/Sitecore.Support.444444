@@ -103,9 +103,7 @@ namespace Sitecore.Support.Data.Eventing
         var total = new Stopwatch();
 
         var deepSleep = ParallelEventQueueSettings.EventQueueThreadDeepSleep;
-        var securityDisablerEnabled = EventQueueSettings.SecurityDisabler;
-        var publishEndSleep = ParallelEventQueueSettings.EventQueueThreadPublishEndSleep;
-        var publishEndSync = ParallelEventQueueSettings.EventQueueThreadPublishEndSynchronization;
+        var securityDisablerEnabled = EventQueueSettings.SecurityDisabler;                           
         var logInterval = ParallelEventQueueSettings.EventQueueThreadLogInterval;
         var historyEnabled = EventQueueSettings.HistoryEnabled;
         var nextLogTime = DateTime.UtcNow;

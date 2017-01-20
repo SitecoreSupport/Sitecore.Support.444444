@@ -28,7 +28,35 @@
       Assert.ArgumentNotNull(action, nameof(action));
       Assert.ArgumentNotNull(itemId, nameof(itemId));            
 
-      var sql = "INSERT INTO {0}History{1} (  {0}Id{1}, {0}Category{1}, {0}Action{1}, {0}ItemId{1}, {0}ItemLanguage{1}, {0}ItemVersion{1}, {0}ItemPath{1}, {0}TaskStack{1}, {0}UserName{1}, {0}AdditionalInfo{1}, {0}Created{1})VALUES (  {2}id{3}, {2}category{3}, {2}action{3}, {2}itemId{3}, {2}itemLanguage{3}, {2}itemVersion{3}, {2}itemPath{3}, {2}taskStack{3}, {2}userName{3}, {2}additionalInfo{3}, {2}created{3})";
+      const string Query = @"
+INSERT INTO {0}History{1} 
+(
+  {0}Id{1}, 
+  {0}Category{1}, 
+  {0}Action{1}, 
+  {0}ItemId{1}, 
+  {0}ItemLanguage{1}, 
+  {0}ItemVersion{1}, 
+  {0}ItemPath{1}, 
+  {0}TaskStack{1}, 
+  {0}UserName{1}, 
+  {0}AdditionalInfo{1}, 
+  {0}Created{1}
+) 
+VALUES 
+(  
+  {2}id{3}, 
+  {2}category{3}, 
+  {2}action{3}, 
+  {2}itemId{3}, 
+  {2}itemLanguage{3}, 
+  {2}itemVersion{3}, 
+  {2}itemPath{3}, 
+  {2}taskStack{3}, 
+  {2}userName{3}, 
+  {2}additionalInfo{3}, 
+  {2}created{3}
+)";
 
       var parameters = new object[]
       {
