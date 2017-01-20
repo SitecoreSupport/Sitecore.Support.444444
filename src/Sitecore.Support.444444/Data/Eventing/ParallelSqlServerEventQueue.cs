@@ -181,12 +181,12 @@ namespace Sitecore.Support.Data.Eventing
           var processMs = process.ElapsedMilliseconds;
           var publishEndMs = publishEnd.ElapsedMilliseconds;
 
-          Log.Info(string.Format("Health.ProcessEQ{0}.Count: {1}", count), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.PublishEndCount: {1}", publishEndCount), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Total: {1}", totalMs), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Deserialize: {1}", deserializeMs), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.Process: {1}", processMs), this);
-          Log.Info(string.Format("Health.ProcessEQ{0}.Time.PublishEndSleep: {1}", publishEndMs), this);
+          Log.Info(string.Format("Health.ProcessEQ.Count: {0}", count), this);
+          Log.Info(string.Format("Health.ProcessEQ.PublishEndCount: {0}", publishEndCount), this);
+          Log.Info(string.Format("Health.ProcessEQ.Time.Total: {0}", totalMs), this);
+          Log.Info(string.Format("Health.ProcessEQ.Time.Deserialize: {0}", deserializeMs), this);
+          Log.Info(string.Format("Health.ProcessEQ.Time.Process: {0}", processMs), this);
+          Log.Info(string.Format("Health.ProcessEQ.Time.PublishEndSleep: {0}", publishEndMs), this);
                                                      
           var historyLogEnabled = historyEnabled;
           if (historyLogEnabled)
@@ -206,10 +206,10 @@ namespace Sitecore.Support.Data.Eventing
             var processAvg = processMs / count;
             var publishEndAvg = publishEndMs / count;
 
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Total: {1}", totalAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Deserialize: {1}", deserializeAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.Process: {1}", processAvg), this);
-            Log.Info(string.Format("Health.ProcessEQ{0}.Time.Avg.PublishEndSleep: {1}", publishEndAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Total: {0}", totalAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Deserialize: {0}", deserializeAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.Process: {0}", processAvg), this);
+            Log.Info(string.Format("Health.ProcessEQ.Time.Avg.PublishEndSleep: {0}", publishEndAvg), this);
 
             if (historyLogEnabled)
             {
