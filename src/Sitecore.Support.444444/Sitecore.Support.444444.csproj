@@ -52,10 +52,6 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\History\AdvancedDatabaseHistoryProvider.cs" />
-    <Compile Include="Data\History\AdvancedHistoryManager.cs" />
-    <Compile Include="Data\History\AdvancedHistoryProvider.cs" />
-    <Compile Include="Data\History\AdvancedHistoryProviderCollection.cs" />
     <Compile Include="Data\Eventing\EventQueueSettings.cs" />
     <Compile Include="Data\Eventing\HistoryLoggingEventQueue.cs" />
     <Compile Include="Data\Eventing\ParallelEventQueueSettings.cs" />
@@ -69,9 +65,7 @@
     <Compile Include="Diagnostics\SimpleCounter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Reflection\Helper.cs" />
-    <Compile Include="Data\History\SettingBasedAdvancedHistoryProvider.cs" />
-    <Compile Include="Data\History\SqlServer\SqlServerAdvancedDatabaseHistoryProvider.cs" />
-    <Compile Include="Data\History\SqlServer\SqlServerAdvancedHistoryProvider.cs" />
+    <Compile Include="Data\History\SqlServerHistoryProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Config\Include\zzz\Sitecore.Support.444444.config" />

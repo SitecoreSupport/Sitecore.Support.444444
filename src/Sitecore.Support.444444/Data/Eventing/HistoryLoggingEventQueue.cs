@@ -2,9 +2,7 @@
 {
   using System;
   using System.Collections.Generic;
-  using System.Diagnostics;
-  using System.Threading;
-  using Sitecore.AdvancedHistory;
+  using System.Diagnostics;      
   using Sitecore.Data;
   using Sitecore.Data.DataProviders.Sql;
   using Sitecore.Data.Eventing;
@@ -14,6 +12,7 @@
   using Sitecore.Eventing.Remote;
   using Sitecore.SecurityModel;
   using Sitecore.StringExtensions;
+  using Sitecore.Support.Data.History;
   using Sitecore.Support.Diagnostics;
 
   [UsedImplicitly]
@@ -56,19 +55,19 @@
       this.DatabaseName = databaseName;
       this.NextLogTime = DateTime.UtcNow;
       this.LogInterval = EventQueueSettings.LogInterval;
+      this.History = new SqlServerHistoryProvider(databaseName);
 
       if (useBaseFunctionality)
       {
         return;
       }
 
-      this.InitializeHistory();      
 
       Log.Info("Support HistoryLoggingEventQueue is configured for {0} database".FormatWith(databaseName), this);
     }
 
     [NotNull]
-    protected AdvancedDatabaseHistoryProvider History { get; private set; }
+    protected SqlServerHistoryProvider History { get; }
 
     protected DateTime NextLogTime { get; set; }
 
@@ -307,11 +306,6 @@
       }
 
       this.History.AddHistoryEntry("Event", eventName, ID.Null, taskStack: threadNumber.ToString(), userName: queuedEvent.Created.ToString(DateTimeFormat));
-    }
-
-    private void InitializeHistory()
-    {
-      this.History = AdvancedHistoryManager.GetProvider(this.DatabaseName);
-    }
+    }    
   }
 }

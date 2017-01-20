@@ -1,4 +1,4 @@
-﻿namespace Sitecore.AdvancedHistory.SqlServer
+﻿namespace Sitecore.Support.Data.History
 {
   using System;
   using Sitecore.Configuration;
@@ -7,7 +7,7 @@
   using Sitecore.Data.SqlServer;
   using Sitecore.Diagnostics;
 
-  public class SqlServerAdvancedDatabaseHistoryProvider : AdvancedDatabaseHistoryProvider
+  public class SqlServerHistoryProvider 
   {
     [NotNull]
     private static readonly string InstanceName = Settings.InstanceName;
@@ -15,14 +15,14 @@
     [NotNull]
     private readonly SqlDataApi DataApi;
 
-    public SqlServerAdvancedDatabaseHistoryProvider([NotNull] string databaseName)
+    public SqlServerHistoryProvider([NotNull] string databaseName)
     {
-      Assert.ArgumentNotNull(databaseName, "databaseName");
+      Assert.ArgumentNotNull(databaseName, nameof(databaseName));
 
-      this.DataApi = new SqlServerDataApi(Settings.GetConnectionString(databaseName));
+      DataApi = new SqlServerDataApi(Settings.GetConnectionString(databaseName));
     }
 
-    public override void AddHistoryEntry(string category, string action, ID itemId, string language = null, int version = 0, string taskStack = null, string userName = null)
+    public void AddHistoryEntry(string category, string action, ID itemId, string language = null, int version = 0, string taskStack = null, string userName = null)
     {      
       Assert.ArgumentNotNull(category, nameof(category));
       Assert.ArgumentNotNull(action, nameof(action));
