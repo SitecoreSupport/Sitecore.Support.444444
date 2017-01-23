@@ -59,6 +59,7 @@
     <Compile Include="Data\SqlServer\DatabasePropertiesProvider.cs" />
     <Compile Include="Data\SqlServer\PublishQueueProvider.cs" />
     <Compile Include="Data\SqlServer\SqlServerDataProvider.cs" />
+    <Compile Include="Data\SqlServer\ViewBasedSqlServerDataProvider.cs" />
     <Compile Include="Diagnostics\SimpleCounter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Reflection\Helper.cs" />
