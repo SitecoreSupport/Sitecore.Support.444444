@@ -18,7 +18,7 @@
   using Sitecore.Support.Diagnostics;
 
   [UsedImplicitly]
-  public class HistoryLoggingEventQueue : SqlServerEventQueue
+  public class HistoryLoggingEventQueue : NoLockSqlServerEventQueue
   {
     private const string DateTimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
 
