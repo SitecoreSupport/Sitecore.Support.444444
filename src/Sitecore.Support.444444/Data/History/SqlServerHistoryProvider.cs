@@ -20,13 +20,14 @@
       Assert.ArgumentNotNull(databaseName, nameof(databaseName));
 
       DataApi = new SqlServerDataApi(Settings.GetConnectionString(databaseName));
+
+      Log.Info($"{nameof(SqlServerHistoryProvider)} is initialized for {databaseName}.", this);
     }
 
     public void AddHistoryEntry(string category, string action, ID itemId = null, string language = null, int version = 0, string taskStack = null, string userName = null)
     {      
       Assert.ArgumentNotNull(category, nameof(category));
       Assert.ArgumentNotNull(action, nameof(action));
-      Assert.ArgumentNotNull(itemId, nameof(itemId));            
 
       const string Query = @"
 INSERT INTO {0}History{1} 
@@ -63,7 +64,7 @@ VALUES
         "id", ID.NewID,
         "category", category,
         "action", action,
-        "itemId", itemId,
+        "itemId", itemId ?? ID.Null,
         "itemLanguage", language ?? "",
         "itemVersion", version,
         "itemPath", string.Empty,

@@ -461,12 +461,12 @@
 
       try
       {
-        var parameters = new object[] { Api, Database };
+        var parameters = new object[] {Api, Database};
         var eventQueue = ReflectionUtil.CreateObject(type, parameters);
         Assert.IsNotNull(eventQueue, "eventQueue");
 
         return (EventQueue)eventQueue;
-      }
+      } 
       catch (Exception ex)
       {
         Log.Error($"Cannot instantiate the \"{type.AssemblyQualifiedName}\" type which represents an EventQueue. The default one will be used instead: {typeof(SqlServerEventQueue).AssemblyQualifiedName}", ex, this);

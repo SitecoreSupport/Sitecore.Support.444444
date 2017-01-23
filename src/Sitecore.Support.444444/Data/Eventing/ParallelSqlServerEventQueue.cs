@@ -22,6 +22,7 @@ namespace Sitecore.Support.Data.Eventing
 
     private DateTime EffectiveStampLastSaved = DateTime.UtcNow;
 
+    [UsedImplicitly]
     public ParallelSqlServerEventQueue([NotNull] SqlDataApi api, [NotNull] Database database)
       : base(api, database)
     {
@@ -47,7 +48,7 @@ namespace Sitecore.Support.Data.Eventing
         IsBackground = true
       };
 
-      thread.Start(Queue);
+      thread.Start();
     }
 
     public bool ParallelProcessingEnabled { get; }
